@@ -1,5 +1,5 @@
 # rsd
 Recommendation System Daemon
 
-#documentation
+# documentation
 See [doc](doc) for documentation.
