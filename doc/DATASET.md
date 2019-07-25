@@ -11,3 +11,6 @@ Sono state create le seguenti tabelle:
 | games_crossvalidation |500|`INSERT INTO games_crossvalidation SELECT * FROM games_daily WHERE playtime_forever>0 AND (steamid,appid) NOT IN (SELECT steamid,appid FROM games_test) ORDER BY RAND() LIMIT 500`      |
 | games_test            |500| `INSERT INTO games_test SELECT * FROM games_daily WHERE playtime_forever>0 ORDER BY RAND() LIMIT 500`     |
 | games_training        |5000| `INSERT INTO games_training SELECT * FROM games_daily WHERE playtime_forever>0 AND (steamid,appid) NOT IN (SELECT steamid,appid FROM games_test) AND (steamid,appid) NOT IN (SELECT steamid,appid FROM games_crossvalidation) ORDER BY RAND() LIMIT 5000`      |
+
+
+See [doc](doc) for documentation.
