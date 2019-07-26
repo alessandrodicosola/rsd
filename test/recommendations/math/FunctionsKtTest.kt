@@ -1,10 +1,8 @@
-package math
+package recommendations.math
 
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*
-import java.util.*
-import kotlin.math.exp
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -37,7 +35,7 @@ internal class FunctionsKtTest {
         val ratingsA = listOf(1, 4, 5).map { it.toDouble() }
         val ratingsB = listOf(2, 1, 2).map { it.toDouble() }
 
-        val cv = math.cosineSimilarity(intersectA, intersectB, ratingsA, ratingsB)
+        val cv = recommendations.math.cosineSimilarity(intersectA, intersectB, ratingsA, ratingsB)
 
         assertEquals(cv, 12.0 / sqrt(42.0 * 9.0))
     }
@@ -65,7 +63,7 @@ internal class FunctionsKtTest {
 
 
             val start = System.currentTimeMillis()
-            math.cosineSimilarity(intersectU, intersectV, ratingsU, ratingsV);
+            recommendations.math.cosineSimilarity(intersectU, intersectV, ratingsU, ratingsV);
             val end = System.currentTimeMillis()
             time += end - start;
         }
@@ -110,7 +108,7 @@ internal class FunctionsKtTest {
 
         val avgA = ratingsA.average()
         val avgB = ratingsB.average()
-        val cv = math.personaCorrelation(intersectA, intersectB, avgA, avgB)
+        val cv = recommendations.math.personaCorrelation(intersectA, intersectB, avgA, avgB)
 
         assertEquals(-sqrt(37.0) / 37, cv, 0.00000001) // epsilon 10^-9
 
@@ -146,10 +144,10 @@ internal class FunctionsKtTest {
 
         var map_weights = mutableMapOf<Long, Double>()
 
-        math.personaCorrelation(map_a, map_b, ratings_a.average(), ratings_b.average()).let { map_weights.set(0, it) }
-        math.personaCorrelation(map_c, map_b, ratings_c.average(), ratings_b.average()).let { map_weights.set(1, it) }
+        recommendations.math.personaCorrelation(map_a, map_b, ratings_a.average(), ratings_b.average()).let { map_weights.set(0, it) }
+        recommendations.math.personaCorrelation(map_c, map_b, ratings_c.average(), ratings_b.average()).let { map_weights.set(1, it) }
 
-        val cv = math.WPC(mapA, mapB,ratingsA.average(),ratingsB.average(),map_weights)
+        val cv = recommendations.math.WPC(mapA, mapB,ratingsA.average(),ratingsB.average(),map_weights)
         println(cv)
     }
 

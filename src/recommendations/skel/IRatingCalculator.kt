@@ -1,5 +1,5 @@
-package recommendations
+package recommendations.skel
 
 interface IRatingCalculator {
-    fun calculate(objId : Long)
+    fun calculate() : Double
 }

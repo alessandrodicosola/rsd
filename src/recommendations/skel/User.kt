@@ -1,4 +1,3 @@
 package recommendations.skel
 
-class User {
-}
+data class User(var avg : Double,var std : Double)

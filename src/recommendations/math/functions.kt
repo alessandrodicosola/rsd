@@ -1,9 +1,8 @@
-package math
+package recommendations.math
 
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.test.assertEquals
-import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 
@@ -67,6 +66,7 @@ fun weightPersonaCorrelationWithFactorSize(
     return personaCorrelation(intersectU, intersectV, avgU, avgV) * factor
 }
 
+//TODO Check
 fun WPC(
     intersectU: Map<Long, Double>,
     intersectV: Map<Long, Double>,
