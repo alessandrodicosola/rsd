@@ -13,4 +13,3 @@ Sono state create le seguenti tabelle:
 | games_training        |5000| `INSERT INTO games_training SELECT * FROM games_daily WHERE playtime_forever>0 AND (steamid,appid) NOT IN (SELECT steamid,appid FROM games_test) AND (steamid,appid) NOT IN (SELECT steamid,appid FROM games_crossvalidation) ORDER BY RAND() LIMIT 5000`      |
 
 
-See [doc](doc) for documentation.
