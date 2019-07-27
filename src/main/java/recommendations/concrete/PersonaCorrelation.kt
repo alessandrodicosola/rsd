@@ -8,6 +8,7 @@ import java.util.function.BiFunction
 import kotlin.math.sqrt
 
 /**
+ * Calculate weight between two users through Persona Correlation
  * @param ratingsU Rates given by U to items rated also by V
  * @param ratingsV Rates given by V to items rated also by U
  */
@@ -36,3 +37,11 @@ class PersonaCorrelation(
     }
 
 }
+
+class WeightedPersonaCorrelation(
+    var ratingsU: HashMap<Long, Double>,
+    var ratingsV: HashMap<Long, Double>,
+    var user: User,
+    var neighbor: Neighbor,
+    factor: Int
+) : WeightedCorrelation(PersonaCorrelation(ratingsU, ratingsV, user, neighbor), ratingsU.size, factor)

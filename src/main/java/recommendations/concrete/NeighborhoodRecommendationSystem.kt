@@ -6,6 +6,10 @@ import recommendations.skel.RSObject
 
 class NeighborhoodRecommendationSystem(ratingCalculator: IRatingCalculator) : IRSEngine(ratingCalculator) {
     override fun getRecommendations(userId: Long): List<RSObject> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+
+        // 1.Get neighbors
+        // 2.Calculate ratings
+        // 3.Show List<RSObject>
+        TODO("implement me")
     }
 }
