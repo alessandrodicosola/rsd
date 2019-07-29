@@ -1,15 +1,24 @@
 ## DATASET
 
+
 È stato utilizzato il seguente dataset [https://steam.internet.byu.edu/](https://steam.internet.byu.edu/)
 
 È stato utilizzato l'applicatiovo [lsqls](https://github.com/alessandrodicosola/lsqls) per generare solo le tabelle necessarie e splittarle così da poter gestire l'enorme quantità di dati.
 
 Sono state create le seguenti tabelle:
 
-| Table                 |Output                                         | SQL Query |
-|-----------------------|-----------------------------------------------|-----------|
-| games_test            |Query OK, 10000 rows affected (3 min 28.231 sec)| `INSERT INTO games_test SELECT * FROM games_daily WHERE playtime_forever > 0 GROUP BY steamid HAVING COUNT(steamid)>50 ORDER BY RAND() LIMIT 5000;`     |
-| games_crossvalidation |Query OK, 10000 rows affected (4 min 10.667 sec)|`INSERT INTO games_crossvalidation SELECT * FROM games_daily WHERE playtime_forever > 0 AND (steamid,appid) NOT IN (SELECT steamid,appid FROM games_test ) GROUP BY steamid HAVING COUNT(steamid)>50 ORDER BY RAND() LIMIT 10000`      |
-| games_training        |Query OK, 100000 rows affected (4 min 37.411 sec)| `INSERT INTO games_training SELECT * FROM games_daily WHERE (steamid,appid) NOT IN (SELECT steamid,appid FROM games_test ) AND (steamid,appid) NOT IN (SELECT steamid,appid FROM games_crossvalidation) GROUP BY steamid HAVING COUNT(steamid)>50 ORDER BY RAND() LIMIT 100000`      |
+| Table                 | SQL Query                                       |           |
+|-----------------------|-----------------------------------------------  |-----------|
+| games_test            |`INSERT INTO games_test SELECT * FROM games_1 WHERE RAND() < 0.2 AND playtime_forever > 0 LIMIT 10000` |         |
+| games_crossvalidation |`INSERT INTO games_crossvalidation SELECT * FROM games_1 WHERE (steamid,appid) NOT IN (SELECT steamid,appid FROM games_tests) AND RAND() < 0.2 AND playtime_forever > 0 LIMIT 10000`                                |         |
+| games_training        |`INSERT INTO games_training SELECT * FROM games_1 AS G1 WHERE NOT EXISTS(SELECT * FROM games_test as GT WHERE GT.steamid = G1.steamid AND GT.appid = G1.steamid) AND NOT EXISTS(SELECT * FROM games_crossvalidation as GC WHERE GC.steamid = G1.steamid AND GC.appid = G1.steamid) AND RAND() < 0.5 LIMIT 50000;`                    
 
 
+Sono state aggiunte le seguenti informazio0ni ad hoc per l'use in modo tale da avere abbastanza informazioni per gli utenti
+
+| User                  | SQL Query | Comment |
+|-----------------------|-----------|---------|
+|76561198015082830      |`SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)`| Select all games aren't rated by user |
+| |`SELECT * FROM games_1 WHERE playtime_forever > 0 AND playtime_forever IS NOT NULL AND appid IN (SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)) LIMIT 25000;`| Select all information from other users for recommends games to user |
+| |`INSERT IGNORE INTO games_training SELECT * FROM games_1 WHERE playtime_forever > 0 AND playtime_forever IS NOT NULL AND appid IN (SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)) LIMIT 25000;`|Insert all information in games_training|
+|76561198014912110      | Same as before |
