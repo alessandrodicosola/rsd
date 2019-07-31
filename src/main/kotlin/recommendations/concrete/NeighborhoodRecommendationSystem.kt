@@ -62,7 +62,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
         val user = User(userId, 0.0, 0.0)
         // Returns user's avg and std
         transaction {
-            addLogger(StdOutSqlLogger)
+
             GamesDAO
                 .slice(
                     GamesDAO.PlaytimeForever.avg(),
@@ -92,7 +92,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
 
         val userForMissingItems: MutableMap<Int, List<Long>> = mutableMapOf()
 
-        transaction {
+        val missingItems = transaction {
             addLogger(StdOutSqlLogger)
 
             // 1. Get all missing items for user and next the users who rated the item
@@ -100,52 +100,55 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
             val statement =
                 this.connection.prepareStatement("SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = ? ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)")
             statement.setLong(1, user.id)
-            val missingItems = statement.executeQuery().let {
+            return@transaction statement.executeQuery().let {
                 val out = arrayListOf<Int>()
                 while (it.next()) {
                     out.add(it.getInt("T1.appid"))
                 }
                 out
             }
+        }
+
+        transaction {
             logger.info("Get all users that rated missing items")
-            missingItems.forEach {
+            missingItems.forEach { appid ->
                 // 4. Get for each missing item users that rated it
-                userForMissingItems[it] = GamesDAO.slice(GamesDAO.SteamId)
-                    .select { GamesDAO.AppId eq it }
+                userForMissingItems[appid] = GamesDAO.slice(GamesDAO.SteamId)
+                    .select { GamesDAO.AppId eq appid }
                     .map { it[GamesDAO.SteamId] }
             }
         }
 
         return userForMissingItems.mapValues { entry ->
+            val itemMissing = entry.key
             val neighborsCache: MutableMap<Long, Neighbor> = mutableMapOf()
             val neighborsId = entry.value
 
             var currentNeighbor = Neighbor(0, 0.0, 0.0, 0.0);
 
-            for (id in neighborsId) {
-                if (!neighborsCache.containsKey(id)) {
+            for (currentNeighborId in neighborsId) {
+                if (!neighborsCache.containsKey(currentNeighborId)) {
 
-                    currentNeighbor.id = id
+                    currentNeighbor.id = currentNeighborId
 
-                    logger.info("Get neighbor [$id] information")
+                    logger.info("Get neighbor [$currentNeighborId] information")
 
                     transaction {
-                        addLogger(StdOutSqlLogger)
 
                         // 5.0 Calculate neighbor information
                         GamesDAO.slice(
                             GamesDAO.PlaytimeForever.avg(),
                             GamesDAO.PlaytimeForever.function("STD")
                         )
-                            .select { GamesDAO.SteamId eq id }
+                            .select { GamesDAO.SteamId eq currentNeighborId }
                             .groupBy(GamesDAO.SteamId)
                             .map {
                                 currentNeighbor.avg = it[GamesDAO.PlaytimeForever.avg()]?.toDouble() ?: 0.0
                                 currentNeighbor.std = it[GamesDAO.PlaytimeForever.function("STD")]?.toDouble() ?: 0.0
                             }
                     }
-                    neighborsCache[id] = currentNeighbor;
-                } else currentNeighbor = neighborsCache[id]!!
+                    neighborsCache[currentNeighborId] = currentNeighbor;
+                } else currentNeighbor = neighborsCache[currentNeighborId]!!
 
 
                 //Avoid neighbors with only one game and playtime_forever = 0 or NULL
@@ -156,42 +159,59 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
 
 
                     transaction {
-                        addLogger(StdOutSqlLogger)
-                        val t1 = GamesDAO.alias("T1")
-                        val t2 = GamesDAO.alias("T2")
-                        // 5.1 Calculate the set of items rated by U [User] and V [Neighbor]
+
+                        /* 5.1 Calculate the set of items rated by U [User] and V [Neighbor]
+                            SELECT T1.appid,T1.playtime_forever,T2.playtime_forever FROM
+                                (SELECT appid,playtime_forever FROM games_training WHERE steamid = ?) AS T1
+                                    LEFT JOIN
+                                (SELECT appid,playtime_forever FROM games_training WHERE steamid = ?) AS T2
+                                    ON T1.appid = T2.appid
+                            WHERE appid != itemMissing
+                        */
+
+                        val t1 = GamesDAO.slice(GamesDAO.AppId, GamesDAO.PlaytimeForever)
+                            .select { GamesDAO.SteamId eq user.id }
+                            .alias("T1")
+                        val t2 = GamesDAO.slice(GamesDAO.AppId, GamesDAO.PlaytimeForever)
+                            .select { GamesDAO.SteamId eq currentNeighborId }
+                            .alias("T2")
+
                         t1.leftJoin(t2, { t1[GamesDAO.AppId] }, { t2[GamesDAO.AppId] })
                             .slice(t1[GamesDAO.AppId], t1[GamesDAO.PlaytimeForever], t2[GamesDAO.PlaytimeForever])
                             .select {
-                                t1[GamesDAO.PlaytimeForever] greater 0 and (t2[GamesDAO.PlaytimeForever] greater 0)
+                                t1[GamesDAO.AppId] neq itemMissing
+                            }.filter {
+                                it.getOrNull(t1[GamesDAO.PlaytimeForever]) != null && it.getOrNull(t2[GamesDAO.PlaytimeForever]) != null
                             }
                             .map {
-                                itemsU.put(it[t1[GamesDAO.AppId]], it[t1[GamesDAO.PlaytimeForever]].toDouble())
-                                itemsU.put(it[t1[GamesDAO.AppId]], it[t2[GamesDAO.PlaytimeForever]].toDouble())
+                                itemsU[it[t1[GamesDAO.AppId]]] = it[t1[GamesDAO.PlaytimeForever]].toDouble()
+                                itemsV[it[t1[GamesDAO.AppId]]] = it[t2[GamesDAO.PlaytimeForever]].toDouble()
                             }
                     }
 
-                    currentNeighbor.weight =
-                        WeightedPersonaCorrelation(
+                    logger.info("${user.id} and $currentNeighborId have rated both ${itemsU.size} items ")
+
+                    if (itemsU.isNotEmpty()) {
+                        currentNeighbor.weight = WeightedPersonaCorrelation(
                             itemsU,
                             itemsV,
                             user,
                             currentNeighbor,
                             factor
                         ).calculate()
+                    } else currentNeighbor.weight = 0.0
+
+                    neighborsCache[currentNeighborId] = currentNeighbor
 
                     logger.info("Neighbor information: $currentNeighbor")
 
-                    neighborsCache[id] = currentNeighbor
                 }
-
-
             }
 
             neighborsCache.filter { it.value.weight > 0 }.map { it.value }
                 .sortedByDescending { it.weight }
                 .let {
-                    return@mapValues it.slice(0..min(numberOfNeighbors, it.size - 1))
+                    return@mapValues it.slice(0..min(numberOfNeighbors - 1, it.size - 1))
                 }
         }
 
@@ -203,19 +223,20 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
 
         //1. Retrieve ratings given by V [Neighbor] for item i
         itemsAndNeighbors.filter { it.value.isNotEmpty() }.forEach { entry ->
-            var ratings: Map<Long, Double> = mapOf()
+
             val neighbors = itemsAndNeighbors.get(entry.key)!!.map { it.id }
 
-            transaction {
-                ratings = GamesDAO.slice(GamesDAO.SteamId, GamesDAO.PlaytimeForever)
+            val ratings = transaction {
+                addLogger(StdOutSqlLogger)
+                return@transaction GamesDAO.slice(GamesDAO.SteamId, GamesDAO.PlaytimeForever)
                     .select { GamesDAO.AppId eq entry.key and (GamesDAO.SteamId inList neighbors) }
                     .associate {
-                        Pair(it[GamesDAO.SteamId], it[GamesDAO.PlaytimeForever].toDouble())
+                        it[GamesDAO.SteamId] to it[GamesDAO.PlaytimeForever].toDouble()
                     }
             }
-            val hashRatings = HashMap(ratings)
+
             // 2. Calculate score
-            val score = ZScoreRating(user, entry.value, hashRatings).calculate()
+            val score = ZScoreRating(user, entry.value, ratings).calculate()
             listOut.add(RSObject(entry.key.toLong(), score))
 
         }
