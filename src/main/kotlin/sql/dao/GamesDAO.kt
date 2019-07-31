@@ -2,7 +2,13 @@ package sql.dao
 
 import org.jetbrains.exposed.sql.Table
 
-object GamesTrainingDAO : Table("games_daily") {
+/**
+ * Main object for accessing games information
+ * Possibile values:
+ *  - games_daily [ 384M of entry ]
+ *  - games_training  [ 100K-500K  of entry ]
+ */
+object GamesDAO : Table("games_training") {
     val SteamId = long("steamid").primaryKey()
     val AppId = integer("appid").primaryKey()
     val DataRetrieved = datetime("dateretrieved").primaryKey()
