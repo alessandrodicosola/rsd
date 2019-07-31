@@ -2,6 +2,9 @@ package recommendations.math
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import recommendations.concrete.PersonaCorrelation
+import recommendations.skel.Neighbor
+import recommendations.skel.User
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -75,43 +78,7 @@ internal class FunctionsKtTest {
         return (1..N).associate { Pair(random.nextLong(), random.nextDouble()) }
     }
 
-    @Test
-    fun personaCorrelation() {
 
-        /*
-               user/item   | a | b | c |
-                   A       | 1 | 4 | 5 |
-                   B       | 2 | 1 | 2 |
-                   C       | 3 | 2 | 3 |
-           HYPOTHESIS:
-
-               A and B have rated the same items: a and c
-               IA is the set of items rated by A (but also B)
-               IB is the set of items rated by B (but also A)
-               II is the set of items rated by A and B
-               AVG_A = 1+4+5/3 = 10/3
-               AVG_B = 2+1+2/3 = 5/3
-
-               sum( II ) = (1-10/3)*(2-5/3) + (5-10/3)*(2-5/3) = -7/9 + 5/9 = -2/9
-               sum( IA ) = (1-10/3)^2+(5-10/3)^2 = 74/9
-               sum( IB ) = (2-5/3)^2+(2-5/3)^2 = 2/9
-
-               CV(A,B) = -2/9 / sqrt(74/9 * 2/9) = -sqrt(37)/37
-         */
-
-        val intersectA = listOf(1, 5).mapIndexed { index, value -> Pair(index.toLong(), value.toDouble()) }.toMap()
-        val intersectB = listOf(2, 2).mapIndexed { index, value -> Pair(index.toLong(), value.toDouble()) }.toMap()
-
-        val ratingsA = listOf(1, 4, 5).map { it.toDouble() }
-        val ratingsB = listOf(2, 1, 2).map { it.toDouble() }
-
-        val avgA = ratingsA.average()
-        val avgB = ratingsB.average()
-        val cv = recommendations.math.personaCorrelation(intersectA, intersectB, avgA, avgB)
-
-        assertEquals(-sqrt(37.0) / 37, cv, 0.00000001) // epsilon 10^-9
-
-    }
 
     @Test
     fun WPC() {
@@ -143,10 +110,12 @@ internal class FunctionsKtTest {
 
         var map_weights = mutableMapOf<Long, Double>()
 
-        recommendations.math.personaCorrelation(map_a, map_b, ratings_a.average(), ratings_b.average()).let { map_weights.set(0, it) }
-        recommendations.math.personaCorrelation(map_c, map_b, ratings_c.average(), ratings_b.average()).let { map_weights.set(1, it) }
+        recommendations.math.personaCorrelation(map_a, map_b, ratings_a.average(), ratings_b.average())
+            .let { map_weights.set(0, it) }
+        recommendations.math.personaCorrelation(map_c, map_b, ratings_c.average(), ratings_b.average())
+            .let { map_weights.set(1, it) }
 
-        val cv = recommendations.math.WPC(mapA, mapB,ratingsA.average(),ratingsB.average(),map_weights)
+        val cv = recommendations.math.WPC(mapA, mapB, ratingsA.average(), ratingsB.average(), map_weights)
         println(cv)
     }
 
