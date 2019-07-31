@@ -4,6 +4,7 @@ import recommendations.skel.IWeightCalculator
 import recommendations.skel.Neighbor
 import recommendations.skel.User
 import kotlin.math.sqrt
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -15,9 +16,9 @@ import kotlin.test.assertTrue
  * @param ratingsU Rates given by U to items rated also by V
  * @param ratingsV Rates given by V to items rated also by U
  */
-class PersonaCorrelation(
-    var ratingsU: HashMap<Long, Double>,
-    var ratingsV: HashMap<Long, Double>,
+class PersonaCorrelation<Key>(
+    var ratingsU: Map<Key, Double>,
+    var ratingsV: Map<Key, Double>,
     var user: User,
     var neighbor: Neighbor
 ) :
@@ -27,7 +28,9 @@ class PersonaCorrelation(
      * @return Weight between U and V
      */
     override fun calculate(): Double {
-        assertTrue(ratingsU.all { ratingsV.containsKey(it.key) })
+        assertEquals(ratingsU.size, ratingsV.size)
+
+        assertTrue(ratingsU.all { ratingsV.containsKey(it.key) }, "ratingsU and ratingsV contains different keys")
 
         val normalizedU = ratingsU.mapValues { it.value - user.avg }
         val normalizedV = ratingsV.mapValues { it.value - neighbor.avg }
@@ -36,19 +39,19 @@ class PersonaCorrelation(
         return normalizedU.mapValues { it.value * normalizedV.get(it.key)!! }.asSequence().sumByDouble { it.value }
             .div(sqrt(den1.asSequence().sumByDouble { it.value }.times(den2.asSequence().sumByDouble { it.value })))
             .let {
-                neighbor.weight = it;
                 it
             }
     }
 
 }
+
 /**
  * The value calculated is used for setting [neighbor] weight
  * @return Weight between U and V
  */
-class WeightedPersonaCorrelation(
-    var ratingsU: HashMap<Long, Double>,
-    var ratingsV: HashMap<Long, Double>,
+class WeightedPersonaCorrelation<Key>(
+    var ratingsU: Map<Key, Double>,
+    var ratingsV: Map<Key, Double>,
     var user: User,
     var neighbor: Neighbor,
     factor: Int
