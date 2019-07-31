@@ -18,7 +18,7 @@ Sono state aggiunte le seguenti informazio0ni ad hoc per l'use in modo tale da a
 
 | User                  | SQL Query | Comment |
 |-----------------------|-----------|---------|
-|76561198015082830      |`SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)`| Select all games aren't rated by user |
+|76561198015082830      |`SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)`| Select all games which aren't rated by user |
 | |`SELECT * FROM games_1 WHERE playtime_forever > 0 AND playtime_forever IS NOT NULL AND appid IN (SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)) LIMIT 25000;`| Select all information from other users for recommends games to user |
 | |`INSERT IGNORE INTO games_training SELECT * FROM games_1 WHERE playtime_forever > 0 AND playtime_forever IS NOT NULL AND appid IN (SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)) LIMIT 25000;`|Insert all information in games_training|
 |76561198014912110      | Same as before |
