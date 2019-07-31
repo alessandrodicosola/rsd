@@ -3,6 +3,7 @@ package recommendations.concrete
 import recommendations.skel.IRatingCalculator
 import recommendations.skel.Neighbor
 import recommendations.skel.User
+import kotlin.math.absoluteValue
 import kotlin.streams.asSequence
 
 /**
@@ -13,11 +14,16 @@ import kotlin.streams.asSequence
  * >                                  SUM(|w_uv|)
  *
  */
-class ZScoreRating(var user: User, var neighbors: List<Neighbor>, var ratingMap: HashMap<Long, Double>) :
+class ZScoreRating(var user: User, var neighbors: List<Neighbor>, var ratingMap: Map<Long, Double>) :
     IRatingCalculator {
 
     override fun calculate(): Double {
-        return neighbors.parallelStream().map { ((ratingMap.get(it.id)!! - it.avg) / it.std) * it.weight }.asSequence().sum()
-            .div(neighbors.sumByDouble { it.weight }).times(user.std) + user.std;
+        val num =
+            neighbors.parallelStream().map { ((ratingMap.get(it.id)!! - it.avg) / it.std) * it.weight }.asSequence()
+                .sumByDouble { it }
+        val den = neighbors.sumByDouble { it.weight.absoluteValue }
+        val rate = num / den
+        val rating = user.avg + user.std * rate
+        return rating
     }
 }
