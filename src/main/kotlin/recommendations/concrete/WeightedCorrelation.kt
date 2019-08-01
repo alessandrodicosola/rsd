@@ -10,6 +10,8 @@ open class WeightedCorrelation(
     private val factor: Int
 ) : IWeightCalculator {
     override fun calculate(): Double {
-        return weightCalculator.calculate() * (min(numberOfItems, factor) / factor).toDouble()
+        val w = weightCalculator.calculate()
+        val f = (min(numberOfItems, factor).toDouble() / factor)
+        return f * w
     }
 }
