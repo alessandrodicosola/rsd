@@ -19,7 +19,7 @@ class ZScoreRating(var user: User, var neighbors: List<Neighbor>, var ratingMap:
 
     override fun calculate(): Double {
         val num =
-            neighbors.parallelStream().map { ((ratingMap.get(it.id)!! - it.avg) / it.std) * it.weight }.asSequence()
+            neighbors.map { ((ratingMap.get(it.id)!! - it.avg) / it.std) * it.weight }.asSequence()
                 .sumByDouble { it }
         val den = neighbors.sumByDouble { it.weight.absoluteValue }
         val rate = num / den
