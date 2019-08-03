@@ -22,6 +22,9 @@ class CachedEngine<T : Number>(private val engine: IRSEngine<T>) : IRSEngine<T>(
         // create engine directory
         val engineDir = cacheDir.resolve(checkNotNull(engine::class.simpleName))
         if (!Files.exists(engineDir)) Files.createDirectory(engineDir)
+
+        info("current .cached directory: $engineDir")
+
     }
 
     private val basePath = Paths.get(".cached", engine::class.simpleName).toAbsolutePath()
@@ -38,7 +41,7 @@ class CachedEngine<T : Number>(private val engine: IRSEngine<T>) : IRSEngine<T>(
             file.reader().use {
                 it.forEachLine {
                     it.split(':').let {
-                        (convertStringToNumber(it[0])) hasScore it[1].toDouble()
+                        cacheList.add(convertStringToNumber(it[0]) as T hasScore it[1].toDouble())
                     }
                 }
             }
@@ -59,8 +62,8 @@ class CachedEngine<T : Number>(private val engine: IRSEngine<T>) : IRSEngine<T>(
 
     private fun convertStringToNumber(string: String): Number {
         val listOfNumber = listOf<Number?>(
-            string.toDoubleOrNull(),
-            string.toIntOrNull()
+            string.toIntOrNull(),
+            string.toDoubleOrNull()
         )
 
         return listOfNumber.filterNotNull().first()
