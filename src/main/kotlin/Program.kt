@@ -1,14 +1,19 @@
 import com.beust.klaxon.json
+import recommendations.concrete.CachedEngine
 
 import recommendations.concrete.Neighborhood_ZScore_TopN_RecommendationSystem
 import java.util.logging.Logger
+
 
 fun main(args: Array<String>) {
 
 
     for (userId in args) {
         Logger.getGlobal().info("Calculating recommendations for user $userId ...")
-        val list = Neighborhood_ZScore_TopN_RecommendationSystem(40).getRecommendations(userId.toLong())
+        val engine = Neighborhood_ZScore_TopN_RecommendationSystem(40)
+        val cachedEngine = CachedEngine(engine)
+
+        val list = cachedEngine.getRecommendations(userId.toLong())
 
         if (list.isEmpty()) print(json {
             obj(

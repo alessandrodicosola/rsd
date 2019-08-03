@@ -12,3 +12,7 @@ inline fun <T> Any.measureBlock(block: () -> T): T {
     return out
 }
 
+fun Any.info(message: String) {
+    Logger.getLogger(this::class.simpleName).info(message)
+}
+
