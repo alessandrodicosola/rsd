@@ -1,4 +1,11 @@
 package recommendations.skel
 
-open class RSObject<out T>(val id: T, val score: Double)
-infix fun <Key> Key.hasScore(that: Double): RSObject<Key> = RSObject(this,that)
+import java.io.Serializable
+
+open class RSObject<T : Number>(val id: T, val score: Double) {
+    override fun toString(): String {
+        return "$id:$score"
+    }
+}
+
+infix fun <T : Number> T.hasScore(that: Double): RSObject<T> = RSObject(this, that)

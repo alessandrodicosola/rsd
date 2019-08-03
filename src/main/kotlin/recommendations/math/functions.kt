@@ -7,11 +7,11 @@ import kotlin.test.assertTrue
 
 
 fun sigmoid(value: Double): Double {
-    return 1 / (1 + kotlin.math.exp(value));
+    return 1 / (1 + kotlin.math.exp(value))
 }
 
 fun derivateSigmoid(value: Double): Double {
-    return sigmoid(value) * (1 - sigmoid(value));
+    return sigmoid(value) * (1 - sigmoid(value))
 }
 
 /**
@@ -33,8 +33,8 @@ fun cosineSimilarity(
 
     val sumIntersect = intersectU.map { it.value * intersectV.get(it.key)!! }.sum()
 
-    val sumU = ratingsU.map { it * it }.sum();
-    val sumV = ratingsV.map { it * it }.sum();
+    val sumU = ratingsU.map { it * it }.sum()
+    val sumV = ratingsV.map { it * it }.sum()
 
     return sumIntersect / sqrt(sumU * sumV)
 }
@@ -52,7 +52,7 @@ fun personaCorrelation(
     val normalizedIV = intersectV.mapValues { it.value - avgV }
     val normalizedRU = intersectU.map { it.value - avgU }
     val normalizedRV = intersectV.map { it.value - avgV }
-    return cosineSimilarity(normalizedIU, normalizedIV, normalizedRU, normalizedRV);
+    return cosineSimilarity(normalizedIU, normalizedIV, normalizedRU, normalizedRV)
 }
 
 fun weightPersonaCorrelationWithFactorSize(

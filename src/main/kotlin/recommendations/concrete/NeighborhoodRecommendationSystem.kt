@@ -93,7 +93,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
          */
         val factor = 25
 
-        var userForMissingItems: Map<Int, List<Long>> = mapOf()
+        val userForMissingItems: Map<Int, List<Long>>
 
         val missingItems = transaction {
             addLogger(StdOutSqlLogger)

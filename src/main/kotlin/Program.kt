@@ -1,8 +1,6 @@
 import com.beust.klaxon.json
 
 import recommendations.concrete.Neighborhood_ZScore_TopN_RecommendationSystem
-import recommendations.skel.RSObject
-import java.nio.file.Paths
 import java.util.logging.Logger
 
 fun main(args: Array<String>) {
