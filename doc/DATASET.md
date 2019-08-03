@@ -14,7 +14,7 @@ Sono state create le seguenti tabelle:
 | games_training        |`INSERT INTO games_training SELECT * FROM games_1 AS G1 WHERE NOT EXISTS(SELECT * FROM games_test as GT WHERE GT.steamid = G1.steamid AND GT.appid = G1.steamid) AND NOT EXISTS(SELECT * FROM games_crossvalidation as GC WHERE GC.steamid = G1.steamid AND GC.appid = G1.steamid) AND RAND() < 0.5 AND EXISTS (SELECT appid FROM app_id_info AS API WHERE Type="game" AND API.appid = G1.appid) LIMIT 50000 `                    
 
 
-Sono state aggiunte le seguenti informazioni ad hoc per l'user in modo tale da avere abbastanza informazioni per gli utenti
+Sono state aggiunte le seguenti informazioni ad hoc per l'user in modo tale da avere abbastanza informazioni rispetto agli utenti
 
 | User                  | SQL Query | Comment |
 |-----------------------|-----------|---------|
