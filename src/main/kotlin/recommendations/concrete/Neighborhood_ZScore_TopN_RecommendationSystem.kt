@@ -91,12 +91,12 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
          * Chapter2. A Comprehensive Survey of Neighborhood-Based Raccomandation Methods
          * @author Xia Ning, Christian Desrosiers and George Karypis
          */
-        val factor = 25
+        val factor = 5
 
         val userForMissingItems: Map<Int, List<Long>>
 
         val missingItems = transaction {
-            addLogger(StdOutSqlLogger)
+           // addLogger(StdOutSqlLogger)
 
             // 1. Get all missing items for user and next the users who rated the item
             logger.info("Get all missing items for user ${user.id}")
@@ -167,7 +167,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
 
 
                 //Avoid neighbors with only one game or playtime_forever = 0 or NULL
-                if (currentNeighbor.avg > 0.0 || currentNeighbor.std > 0) {
+               // if (currentNeighbor.std > 0) {
 
                     val itemsU: MutableMap<Int, Double> = mutableMapOf()
                     val itemsV: MutableMap<Int, Double> = mutableMapOf()
@@ -221,7 +221,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
 
                     logger.info("Neighbor information: $currentNeighbor")
 
-                }
+                //}
             }
 
             neighborsCache.filter { it.value.weight > 0 }.map { it.value }
@@ -243,7 +243,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
             val neighbors = entry.value.map { it.id }
 
             val ratings = transaction {
-                addLogger(StdOutSqlLogger)
+          //      addLogger(StdOutSqlLogger)
                 return@transaction GamesDAO.slice(GamesDAO.SteamId, GamesDAO.PlaytimeForever)
                     .select { GamesDAO.AppId eq itemId and (GamesDAO.SteamId inList neighbors) and (GamesDAO.PlaytimeForever.isNotNull() or (GamesDAO.PlaytimeForever greater 0)) }
                     .associate {

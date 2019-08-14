@@ -16,6 +16,7 @@ Sono state create le seguenti tabelle:
 
 Sono state aggiunte le seguenti informazioni ad hoc per l'user in modo tale da avere abbastanza informazioni rispetto agli utenti
 
+
 | User                  | SQL Query | Comment |
 |-----------------------|-----------|---------|
 |76561198015082830      |`INSERT IGNORE INTO games_training SELECT * FROM games_1 AS G1 WHERE (playtime_forever > 0 OR playtime_forever IS NOT NULL) AND EXISTS (SELECT appid FROM app_id_info AS API WHERE Type="game" AND API.appid = G1.appid) AND appid IN (SELECT T1.appid FROM (SELECT DISTINCT appid FROM games_training ) AS T1 LEFT JOIN (SELECT * FROM games_training WHERE steamid = 76561198015082830 ) AS T2 ON T1.appid = T2.appid WHERE (playtime_forever = 0 OR playtime_forever IS NULL)) LIMIT 1000000;`|Insert all information in games_training|

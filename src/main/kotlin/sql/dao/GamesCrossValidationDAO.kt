@@ -8,6 +8,7 @@ object GamesCrossValidationDAO : Table("games_crossvalidation") {
     val DataRetrieved = GamesDAO.datetime("dateretrieved").primaryKey()
 
     val Playtime2Weeks = GamesDAO.integer("playtime_2weeks")
-    val PlaytimeForever = GamesDAO.integer("playtime_forever")
+    //val PlaytimeForever = GamesDAO.integer("playtime_forever")
+    val PlaytimeForever = GamesDAO.integer("log_playtime")
 
 }

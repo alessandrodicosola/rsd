@@ -24,7 +24,7 @@ internal class CachedEngineTest {
         val engine = CachedEngine(TestEngine())
         engine.getRecommendations(1)
         assertTrue(engine.cached(1))
-        val expected = listOf(1 hasScore 0.0, 2 hasScore 0.3, 3 hasScore 0.5).associate { it ->
+        val expected = listOf(1 hasScore 0.0, 2 hasScore 0.3, 3 hasScore 0.5).associate {
             it.id to (it.id hasScore it.score)
         }
 

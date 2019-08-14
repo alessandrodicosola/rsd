@@ -14,6 +14,8 @@ object GamesDAO : Table("games_training") {
     val DataRetrieved = datetime("dateretrieved").primaryKey()
 
     val Playtime2Weeks = integer("playtime_2weeks")
-    val PlaytimeForever = integer("playtime_forever")
+    //for avoid changing this in the code i change name of the column to use
+    //val PlaytimeForever = integer("playtime_forever")
+    val PlaytimeForever = integer("log_playtime")
 
 }
