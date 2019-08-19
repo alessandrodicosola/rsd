@@ -1,6 +1,7 @@
 package recommendations.concrete
 
 import logging.measureBlock
+import logging.toDoubleOrZero
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.fillParameters
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -22,7 +23,7 @@ import kotlin.to
  */
 
 
-class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) :
+class Neighborhood_ZScore_TopN_RecommendationSystem(private val numberOfNeighbors: Int,private val factorForNormalizeWeight : Int) :
     IRSEngine<Int>() {
 
 
@@ -76,8 +77,8 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
                 }
                 .groupBy(GamesDAO.SteamId)
                 .map {
-                    user.avg = it[GamesDAO.PlaytimeForever.avg()]?.toDouble() ?: 0.0
-                    user.std = it[GamesDAO.PlaytimeForever.function("STD")]?.toDouble() ?: 0.0
+                    user.avg = it[GamesDAO.PlaytimeForever.avg()].toDoubleOrZero()
+                    user.std = it[GamesDAO.PlaytimeForever.function("STD")].toDoubleOrZero()
                 }
         }
         logger.info("User information: $user")
@@ -91,7 +92,6 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
          * Chapter2. A Comprehensive Survey of Neighborhood-Based Raccomandation Methods
          * @author Xia Ning, Christian Desrosiers and George Karypis
          */
-        val factor = 5
 
         val userForMissingItems: Map<Int, List<Long>>
 
@@ -157,9 +157,9 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
                             .select { GamesDAO.SteamId eq currentNeighborId }
                             .groupBy(GamesDAO.SteamId)
                             .map {
-                                currentNeighbor.avg = it[GamesDAO.PlaytimeForever.avg()]?.toDouble() ?: 0.0
+                                currentNeighbor.avg = it[GamesDAO.PlaytimeForever.avg()].toDoubleOrZero()
                                 currentNeighbor.std =
-                                    it[GamesDAO.PlaytimeForever.function("STD")]?.toDouble() ?: 0.0
+                                    it[GamesDAO.PlaytimeForever.function("STD")].toDoubleOrZero()
                             }
                     }
                     neighborsCache[currentNeighborId] = currentNeighbor
@@ -212,7 +212,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(val numberOfNeighbors: Int) 
                             itemsV,
                             user,
                             currentNeighbor,
-                            factor
+                            factorForNormalizeWeight
                         ).calculate()
                     else
                         0.0

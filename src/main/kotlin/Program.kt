@@ -9,7 +9,7 @@ fun main(args: Array<String>) {
     val userId = args[0].toLong()
 
     Logger.getGlobal().info("Calculating recommendations for user $userId ...")
-    val engine = Neighborhood_ZScore_TopN_RecommendationSystem(40)
+    val engine = Neighborhood_ZScore_TopN_RecommendationSystem(40,5)
     val cachedEngine = CachedEngine(engine)
 
     val list = cachedEngine.getRecommendations(userId)
