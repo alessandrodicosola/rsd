@@ -25,15 +25,41 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(
     private val numberOfNeighbors: Int,
     private val factorForNormalizeWeight: Int
 ) :
-    IRSEngine<Long, Int, Double>() {
+    IRSEngine<Long, Int, Double>(), ITestable<Double> {
+
+    private var ratings: MutableMap<Long, MutableMap<Int, Double>>
+    private var users: MutableMap<Long, User>
+    private var items: MutableMap<Int, Item>
+
+    init {
+        var database: Database =
+            Database.connect("jdbc:mysql://127.0.0.1:3306/steam", "com.mysql.jdbc.Driver", "root", "")
 
 
-    private var database: Database =
-        Database.connect("jdbc:mysql://127.0.0.1:3306/steam", "com.mysql.jdbc.Driver", "root", "")
+    }
 
-    private val logger = Logger.getLogger(
-        Neighborhood_ZScore_TopN_RecommendationSystem::javaClass.name
-    )
+    private fun initRatings() {
+        transaction {
+            measureBlock("Retrieve all ratings") {
+                GamesDAO.slice(GamesDAO.SteamId, GamesDAO.AppId, GamesDAO.PlaytimeForever)
+                    .select { GamesDAO.PlaytimeForever.isNotNull() and (GamesDAO.PlaytimeForever.greater(0)) };
+            }.forEach {
+                if (!ratings.containsKey(it[GamesDAO.SteamId])) ratings[it[GamesDAO.SteamId]] = mutableMapOf()
+
+                ratings[it[GamesDAO.SteamId]]!![it[GamesDAO.AppId]] = it[GamesDAO.PlaytimeForever].toDoubleOrZero()
+            }
+        }
+    }
+
+    private fun initUsers() {
+        transaction {
+
+        }
+    }
+
+    override fun test(calculator: IErrorCalculator<Double>) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
 
     override fun getRecommendations(id: Long): List<RSObject<Int, Double>> {
@@ -60,7 +86,6 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(
         // 3.Show List<RSObject>
         return ratings
     }
-
 
     private fun getUserInformation(userId: Long): User {
 
@@ -235,7 +260,7 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(
     }
 
 
-    private fun getRatings(user: User, itemsAndNeighbors: Map<Int, List<Neighbor>>): List<RSObject<Int,Double>> {
+    private fun getRatings(user: User, itemsAndNeighbors: Map<Int, List<Neighbor>>): List<RSObject<Int, Double>> {
         val listOut: MutableList<RSObject<Int, Double>> = mutableListOf()
 
         //1. Retrieve ratings given by V [Neighbor] for item i
