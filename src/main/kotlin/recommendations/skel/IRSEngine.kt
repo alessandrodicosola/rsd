@@ -1,5 +1,5 @@
 package recommendations.skel
 
-abstract class IRSEngine<Key : Number> {
-    abstract fun getRecommendations(id: Long): List<RSObject<Key>>
+abstract class IRSEngine<in ObjKey : Number, out ItemKey : Number, out RatingType : Number> {
+    abstract fun getRecommendations(id: ObjKey): List<RSObject<ItemKey, RatingType>>
 }

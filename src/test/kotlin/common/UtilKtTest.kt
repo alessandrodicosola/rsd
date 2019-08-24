@@ -1,4 +1,4 @@
-package logging
+package common
 
 import org.junit.jupiter.api.Test
 

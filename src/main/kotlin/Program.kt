@@ -6,10 +6,13 @@ import java.util.logging.Logger
 
 
 fun main(args: Array<String>) {
+
+    System.setProperty("java.util.logging.SimpleFormatter.format", "%4\$s %2\$s")
+
     val userId = args[0].toLong()
 
-    Logger.getGlobal():.info("Calculating recommendations for user $userId ...")
-    val engine = Neighborhood_ZScore_TopN_RecommendationSystem(40,5)
+    Logger.getGlobal().info("Calculating recommendations for user $userId ...")
+    val engine = Neighborhood_ZScore_TopN_RecommendationSystem(40, 5)
     val cachedEngine = CachedEngine(engine)
 
     val list = cachedEngine.getRecommendations(userId)

@@ -46,7 +46,6 @@ tasks {
         doLast {
             println("Gradle user home dir : ${gradle.gradleUserHomeDir!!.absolutePath}")
             println("Gradle home dir : ${gradle.gradleHomeDir!!.absolutePath}")
-
         }
     }
 

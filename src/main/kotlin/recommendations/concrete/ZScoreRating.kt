@@ -15,7 +15,7 @@ import kotlin.streams.asSequence
  *
  */
 class ZScoreRating(var user: User, var neighbors: List<Neighbor>, var ratingMap: Map<Long, Double>) :
-    IRatingCalculator {
+    IRatingCalculator<Double> {
 
     override fun calculate(): Double {
         val num =

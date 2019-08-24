@@ -1,20 +1,15 @@
 package recommendations.concrete
 
-import logging.info
+import common.info
 import recommendations.skel.IRSEngine
 import recommendations.skel.RSObject
 import recommendations.skel.hasScore
 import java.io.File
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.nio.file.FileSystem
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
-import kotlin.reflect.typeOf
-import kotlin.test.assertEquals
 
-class CachedEngine<T : Number>(private val engine: IRSEngine<T>) : IRSEngine<T>() {
+class CachedEngine<ObjKey : Number, Item : Number, Value : Number>(private val engine: IRSEngine<ObjKey, Item, Value>) :
+    IRSEngine<ObjKey, Item, Value>() {
     init {
         // create .cache directory
         val cacheDir = Paths.get(".cached")
@@ -29,19 +24,19 @@ class CachedEngine<T : Number>(private val engine: IRSEngine<T>) : IRSEngine<T>(
 
     private val basePath = Paths.get(".cached", engine::class.simpleName).toAbsolutePath()
 
-    fun cached(id: T) = File(basePath.resolve("$id.txt").toString()).exists()
+    fun cached(id: ObjKey) = File(basePath.resolve("$id.txt").toString()).exists()
 
-    override fun getRecommendations(id: Long): List<RSObject<T>> {
+    override fun getRecommendations(id: ObjKey): List<RSObject<Item, Value>> {
 
         val internalFile = basePath.resolve("$id.txt")
         val file = File(internalFile.toString())
-        val cacheList: MutableList<RSObject<T>> = mutableListOf()
+        val cacheList: MutableList<RSObject<Item, Value>> = mutableListOf()
 
         if (file.exists()) {
             file.reader().use {
                 it.forEachLine {
                     it.split(':').let {
-                        cacheList.add(convertStringToNumber(it[0]) as T hasScore it[1].toDouble())
+                        cacheList.add(convertStringToNumber(it[0]) as Item hasScore it[1] as Value)
                     }
                 }
             }

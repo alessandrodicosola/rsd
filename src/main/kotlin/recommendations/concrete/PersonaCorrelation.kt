@@ -10,10 +10,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- *
- * BOOK: Chapter2. A Comprehensive Survey of Neighborhood-Based Raccomandation Methods
- * AUTHOR: Xia Ning, Christian Desrosiers and George Karypis
- *
  * Calculate weight between two users through Persona Correlation
  * @param ratingsU Rates given by U to items rated also by V
  * @param ratingsV Rates given by V to items rated also by U
@@ -33,7 +29,6 @@ class PersonaCorrelation<Key>(
         assertTrue(ratingsU.all { ratingsV.containsKey(it.key) }, "ratingsU and ratingsV contains different keys")
 
 
-
         val normalizedU = ratingsU.mapValues { it.value - user.avg }
         val normalizedV = ratingsV.mapValues { it.value - neighbor.avg }
 
@@ -41,10 +36,8 @@ class PersonaCorrelation<Key>(
         val den1 = normalizedU.mapValues { it.value * it.value }.asSequence().sumByDouble { it.value }
         val den2 = normalizedV.mapValues { it.value * it.value }.asSequence().sumByDouble { it.value }
         val prodDen = sqrt(den1 * den2)
-        val result = num / prodDen
 
-
-        return result
+        return num / prodDen
     }
 
 }

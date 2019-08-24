@@ -1,5 +1,5 @@
 package recommendations.skel
 
-interface IRatingCalculator {
-    fun calculate() : Double
+interface IRatingCalculator<out RatingType> {
+    fun calculate() : RatingType
 }
