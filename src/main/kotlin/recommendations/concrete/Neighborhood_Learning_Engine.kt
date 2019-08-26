@@ -30,9 +30,14 @@ class Neighborhood_Latent_Factor_Engine(
     private val factors: Int,
     private val learningRate: Double,
     private val decreaseLearningRateOf: Double,
-    private val lambda1: Double
+    private val lambda1: Double,
+    private val errorTollerance : Double
 ) : IRSEngine<Long, Int, Double>(), ITrainable, ITestable<Double> {
 
+    // constraint on parameter
+    init {
+        assert(decreaseLearningRateOf < learningRate)
+    }
 
     private var meanOverall: Double = 0.0
     /// Map<SteamId,List<(AppId,Rating)>
@@ -76,9 +81,11 @@ class Neighborhood_Latent_Factor_Engine(
 
     }
 
-    override fun test(calculator: IErrorCalculator<Double>) {
+    override fun test() : Double {
         loadLearn()
-
+        //TODO Load games_test
+        //TODO Load predictions
+        //TODO RMSECalculator(true,predictions).calculate()
     }
 
 
@@ -86,7 +93,7 @@ class Neighborhood_Latent_Factor_Engine(
         transaction {
             measureBlock("Retrieve all ratings") {
                 GamesDAO.slice(GamesDAO.SteamId, GamesDAO.AppId, GamesDAO.PlaytimeForever)
-                    .select { GamesDAO.PlaytimeForever.isNotNull() and (GamesDAO.PlaytimeForever.greater(0)) };
+                    .select { GamesDAO.PlaytimeForever.isNotNull() and (GamesDAO.PlaytimeForever.greater(0)) }
             }.forEach {
                 if (!ratings.containsKey(it[GamesDAO.SteamId])) ratings[it[GamesDAO.SteamId]] = mutableMapOf()
 
@@ -182,17 +189,19 @@ class Neighborhood_Latent_Factor_Engine(
 
         info { "Need to train $userCount users and $ratingsCount ratings" }
 
-        val steps = ratingsCount * factors * iterations
+        //factor for normalizing error
+
         var currentStep = 0
 
 
         var currentError = 0.0
         var beforeError = 0.0
-        val tollerance = 0.0001
 
         for (iteration in 1..iterations) {
+            info { "error $currentError at iteration $iteration" }
+
             /* if convergence */
-            if (iteration != 1 && abs(currentError - beforeError) < tollerance) break
+            if (iteration != 1 && abs(currentError - beforeError) < errorTollerance) break
 
             var sumError = 0.0
 
@@ -209,7 +218,7 @@ class Neighborhood_Latent_Factor_Engine(
 
                     var learningRate = learningRate
 
-                    val prediction = LatentFactorsWithImplicitRating(
+                    val prediction = LatentFactorsWithImplicit_RatingCalculator(
                         meanOverall,
                         internalUser.avg,
                         internalItem.avg,
@@ -237,16 +246,12 @@ class Neighborhood_Latent_Factor_Engine(
 
                     // log
                     currentStep++
-                    if (currentStep % 1000 == 0) {
-                        info {
-                            "steps processed: $currentStep on $steps"
-                        }
-                    }
                 }
             }
 
             beforeError = currentError
             currentError = sumError / ratingsCount
+
         }
 
         val end = LocalDateTime.now()
@@ -348,7 +353,7 @@ class Neighborhood_Latent_Factor_Engine(
                 val user_item = local[0].split("-")
                 val userId = user_item[0].toLong()
                 val itemId = user_item[1].toInt()
-                val values = local[1]
+                val values = local[1].split(',')
                 val array = DoubleArray(values.count())
                 values.forEachIndexed { index, value -> array.set(index, value.toDouble()) }
                 userId to mutableMapOf(itemId to array)
@@ -366,9 +371,10 @@ class Neighborhood_Latent_Factor_Engine(
         latentItems: MutableMap<Int, DoubleArray>,
         latentImplicits: MutableMap<Int, DoubleArray>
     ) {
+
         // Get global information about dataset
-        var biasUser = user.avg;
-        var biasItem = item.avg;
+        var biasUser = user.avg
+        var biasItem = item.avg
 
         // b_u
         biasUser += learningRate * (error - lambda1 * biasUser)
@@ -422,7 +428,7 @@ class Neighborhood_Latent_Factor_Engine(
         val itemsNotRatedByUser = allItems - itemsRatedByUser
 
         return itemsNotRatedByUser.map { itemId ->
-            val prediction = LatentFactorsWithImplicitRating(
+            val prediction = LatentFactorsWithImplicit_RatingCalculator(
                 meanOverall,
                 users[id]!!.avg,
                 items[itemId]!!.avg,

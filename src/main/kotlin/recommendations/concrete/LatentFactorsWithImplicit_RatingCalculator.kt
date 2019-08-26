@@ -4,7 +4,7 @@ import common.dotProduct
 import recommendations.skel.IRatingCalculator
 import kotlin.math.pow
 
-class LatentFactorsWithImplicitRating(
+class LatentFactorsWithImplicit_RatingCalculator(
     private val meanOverall: Double,
     private val biasUser: Double,
     private val biasItem: Double,
