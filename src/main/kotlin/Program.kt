@@ -2,12 +2,11 @@ import com.beust.klaxon.json
 import recommendations.concrete.CachedEngine
 
 import recommendations.concrete.Neighborhood_ZScore_TopN_RecommendationSystem
+import java.util.logging.Level
 import java.util.logging.Logger
 
 
 fun main(args: Array<String>) {
-
-    System.setProperty("java.util.logging.SimpleFormatter.format", "%4\$s %2\$s")
 
     val userId = args[0].toLong()
 

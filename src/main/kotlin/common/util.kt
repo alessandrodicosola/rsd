@@ -1,6 +1,8 @@
 package common
 
 import org.jetbrains.exposed.sql.Seq
+import java.util.logging.Handler
+import java.util.logging.LogRecord
 import java.util.logging.Logger
 import kotlin.random.Random
 
@@ -25,12 +27,13 @@ fun Number?.toDoubleOrZero(): Double {
     return this?.toDouble() ?: 0.0;
 }
 
+
 inline fun <reified T : Any> T.info(message: String) {
     Logger.getLogger(this::class.simpleName).info(message)
 }
 
-inline fun <reified T : Any> T.info(noinline block: () -> String) {
-    Logger.getLogger(this::class.simpleName).info(block)
+inline fun <reified T : Any> T.warning(message: String) {
+    Logger.getLogger(this::class.simpleName).warning(message)
 }
 
 
