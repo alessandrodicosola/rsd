@@ -1,8 +1,10 @@
 package recommendations.concrete
 
 import common.dotProduct
+import common.scalarProduct
 import recommendations.skel.IRatingCalculator
 import kotlin.math.pow
+import kotlin.test.assertEquals
 
 class LatentFactorsWithImplicit_RatingCalculator(
     private val meanOverall: Double,
@@ -14,23 +16,28 @@ class LatentFactorsWithImplicit_RatingCalculator(
 ) : IRatingCalculator<Double> {
 
     override fun calculate(): Double {
-        val firstSize = factorsImplicit.values.elementAt(0).size
+
+        val firstSize = factorsUser.size
+        assertEquals(firstSize, factorsItem.size)
         assert(factorsImplicit.all { it.value.count() == firstSize })
 
         val factorForNormalizing = firstSize.toDouble().pow(-0.5);
 
-        // factorsImplicit.map { it.value[indexFactor] }   For each item get the same factor
-        // .sumByDouble()                                  then returns the sum
-        // factorsItem.asSequence().mapIndexed { index, value -> value * factorsUser[index] }.sumByDouble { it }
-        val sumItemUser = factorsItem.dotProduct(factorsUser)
+        val prodItemUser = factorsItem.dotProduct(factorsUser)
 
-        val sumItemImplicit =
-            // sum for each implicit the factor specified by index then normalize and multiply with factor of item
-            factorsItem.asSequence()
-                .mapIndexed { indexFactor, valueFactor -> valueFactor * (factorsImplicit.asSequence().map { it.value[indexFactor] }.sumByDouble { it } * factorForNormalizing) }
-                .sumByDouble { it }
+        val sumImplicits = DoubleArray(firstSize)
 
-        return meanOverall + biasUser + biasItem + sumItemUser + sumItemImplicit
+        for (factor in 0 until firstSize) {
+            var sum = 0.0
+            for (implicit in factorsImplicit) {
+                sum += implicit.value[factor]
+            }
+            sumImplicits[factor] = sum * factorForNormalizing
+        }
+
+        val prodItemImplicit = factorsItem.dotProduct(sumImplicits)
+
+        return meanOverall + biasUser + biasItem + prodItemUser + prodItemImplicit
     }
 
 }

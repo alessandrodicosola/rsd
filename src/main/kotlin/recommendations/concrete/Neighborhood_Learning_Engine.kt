@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import recommendations.skel.*
 import sql.dao.GamesDAO
+import sql.dao.GamesTestDAO
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,7 +32,7 @@ class Neighborhood_Latent_Factor_Engine(
     private val learningRate: Double,
     private val decreaseLearningRateOf: Double,
     private val lambda1: Double,
-    private val errorTollerance : Double
+    private val errorTollerance: Double
 ) : IRSEngine<Long, Int, Double>(), ITrainable, ITestable<Double> {
 
     // constraint on parameter
@@ -69,31 +70,95 @@ class Neighborhood_Latent_Factor_Engine(
         var database: Database =
             Database.connect("jdbc:mysql://127.0.0.1:3306/steam", "com.mysql.jdbc.Driver", "root", "")
 
-        initRatings()
+
 
         if (File(engineDir.toString()).list { _, name -> name.endsWith("cache") }!!.count() > 0) {
             //trained
             measureBlock("Load learned parameter") { loadLearn() }
         } else {
+            initRatings()
             initDataStructureForTraning()
             train()
         }
 
     }
 
-    override fun test() : Double {
+    override fun test(): Double {
         loadLearn()
-        //TODO Load games_test
-        //TODO Load predictions
-        //TODO RMSECalculator(true,predictions).calculate()
+        val testRatings = mutableMapOf<Long, MutableMap<Int, Double>>()
+        transaction {
+            measureBlock("Retrieve all test ratings") {
+                GamesTestDAO.slice(GamesTestDAO.SteamId, GamesTestDAO.AppId, GamesTestDAO.PlaytimeForever)
+                    .select { GamesTestDAO.PlaytimeForever.isNotNull() }
+            }.forEach {
+
+                testRatings.putIfAbsent(it[GamesTestDAO.SteamId], mutableMapOf())
+
+                testRatings[it[GamesTestDAO.SteamId]]!!.putIfAbsent(
+                    it[GamesTestDAO.AppId],
+                    it[GamesTestDAO.PlaytimeForever].toDoubleOrZero()
+                )
+
+            }
+        }
+        val excludedItems = mutableMapOf<Long, Int>()
+
+        val calculatedRatings: MutableMap<Long, MutableMap<Int, Double>> = mutableMapOf()
+        for (entry in testRatings) {
+            val userId = entry.key
+            for (item in entry.value) {
+                val itemId = item.key
+
+
+                val latentUser = latentUsers[userId]
+                val latentItem = latentItems[itemId]
+                val latentImplicit = latentImplicits[userId]
+
+                if (latentUser == null || latentItem == null || latentImplicit == null) {
+                    warning("rate given by $userId to $itemId exclude from the test")
+                    excludedItems[userId] = itemId
+                    continue
+                }
+
+                val rate = LatentFactorsWithImplicit_RatingCalculator(
+                    meanOverall,
+                    users[userId]!!.avg,
+                    items[itemId]!!.avg,
+                    latentUser,
+                    latentItem,
+                    latentImplicit
+                ).calculate()
+
+                if (!calculatedRatings.containsKey(userId)) calculatedRatings[userId] = mutableMapOf()
+
+                calculatedRatings[userId]!!.put(itemId, rate)
+            }
+        }
+
+
+        //clean test ratings
+        for (exclude in excludedItems) {
+            if (testRatings.contains(exclude.key)) {
+                if (testRatings[exclude.key]!!.contains(exclude.value)) {
+                    testRatings[exclude.key]!!.remove(exclude.value)
+                }
+            }
+        }
+
+        val trueRatings = testRatings.flatMap { it.value.values }.toDoubleArray()
+
+        val predictedRatings = calculatedRatings.flatMap { it.value.values }.toDoubleArray()
+
+        return RMSECalculator(trueRatings, predictedRatings).calculate()
     }
 
 
     private fun initRatings() {
         transaction {
+            addLogger(StdOutSqlLogger)
             measureBlock("Retrieve all ratings") {
                 GamesDAO.slice(GamesDAO.SteamId, GamesDAO.AppId, GamesDAO.PlaytimeForever)
-                    .select { GamesDAO.PlaytimeForever.isNotNull() and (GamesDAO.PlaytimeForever.greater(0)) }
+                    .select { GamesDAO.PlaytimeForever.isNotNull() }
             }.forEach {
                 if (!ratings.containsKey(it[GamesDAO.SteamId])) ratings[it[GamesDAO.SteamId]] = mutableMapOf()
 
@@ -185,9 +250,9 @@ class Neighborhood_Latent_Factor_Engine(
         val start = LocalDateTime.now()
 
         val ratingsCount = ratings.asSequence().map { it.value.size }.sum()
-        val userCount = ratings.asSequence().map { it.key }.groupBy { it }.count()
+        val userCount = ratings.asSequence().map { it.key }.distinct().count()
 
-        info { "Need to train $userCount users and $ratingsCount ratings" }
+        info("Need to train $userCount users and $ratingsCount ratings")
 
         //factor for normalizing error
 
@@ -198,7 +263,7 @@ class Neighborhood_Latent_Factor_Engine(
         var beforeError = 0.0
 
         for (iteration in 1..iterations) {
-            info { "error $currentError at iteration $iteration" }
+            info("error $currentError at iteration $iteration")
 
             /* if convergence */
             if (iteration != 1 && abs(currentError - beforeError) < errorTollerance) break
@@ -255,7 +320,7 @@ class Neighborhood_Latent_Factor_Engine(
         }
 
         val end = LocalDateTime.now()
-        info { "started at $start - ended at $end} - passed ${Duration.between(start, end).toMinutes()}" }
+        info("started at $start - ended at $end} - duration ${Duration.between(start, end).toMinutes()} minutes")
         saveLearn()
 
     }
@@ -347,6 +412,7 @@ class Neighborhood_Latent_Factor_Engine(
             }.toMutableMap()
         }
 
+
         latentImplicits = File(latentImplicitsFile.toString()).useLines {
             it.associate {
                 val local = it.split(":")
@@ -423,6 +489,9 @@ class Neighborhood_Latent_Factor_Engine(
 
 
     override fun getRecommendations(id: Long): List<RSObject<Int, Double>> {
+
+        initRatings()
+
         val itemsRatedByUser = ratings[id]!!.map { it.key }
         val allItems = items.keys
         val itemsNotRatedByUser = allItems - itemsRatedByUser
