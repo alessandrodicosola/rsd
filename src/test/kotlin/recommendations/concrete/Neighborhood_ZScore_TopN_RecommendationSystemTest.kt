@@ -23,4 +23,13 @@ internal class Neighborhood_ZScore_TopN_RecommendationSystemTest {
         assertDoesNotThrow {
             Neighborhood_ZScore_TopN_RecommendationSystem(20, 5).getRecommendations(76561198009843480)
         }
+
+    @Test
+    fun test() {
+        assertDoesNotThrow {
+            val score = Neighborhood_ZScore_TopN_RecommendationSystem(20, 5).test()
+            assertTrue(score.isFinite())
+            print("rmse: $score")
+        }
+    }
 }

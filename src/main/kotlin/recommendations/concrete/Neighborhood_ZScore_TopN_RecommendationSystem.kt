@@ -1,14 +1,19 @@
 package recommendations.concrete
 
+import common.generateDoubleArray
 import common.info
 import common.measureBlock
 import common.toDoubleOrZero
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNotNull
 import org.jetbrains.exposed.sql.transactions.transaction
 import recommendations.skel.*
 import sql.dao.GamesDAO
+import sql.dao.GamesTestDAO
 import java.util.logging.Logger
 import kotlin.math.min
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.to
 
 
@@ -20,13 +25,15 @@ import kotlin.to
  * - Each game is indexed with an Int
  */
 
-//TODO Refactor this
+
+// TODO Implement ITestable
 
 class Neighborhood_ZScore_TopN_RecommendationSystem(
     private val numberOfNeighbors: Int,
     private val factorForNormalizeWeight: Int
 ) :
     IRSEngine<Long, Int, Double>(), ITestable<Double> {
+
 
     private var ratings: MutableMap<Long, MutableMap<Int, Double>> = mutableMapOf()
     private var users: MutableMap<Long, User> = mutableMapOf()
@@ -104,12 +111,12 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(
         val user = users[id]!!
 
         // 1.Get neighbors
-        val itemsAndNeighbors = measureBlock("Get neighbors for user: ${user.id}") {
+        val itemsAndNeighbors = measureBlock("Getting neighbors for user: ${user.id}...") {
             getItemsAndNeighbors(user)
         }
 
         // 2.Calculate ratings for each item
-        val ratings = measureBlock {
+        val ratings = measureBlock("Calculating ratings...") {
             getRatings(user, itemsAndNeighbors)
         }
 
@@ -117,97 +124,159 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(
         return ratings
     }
 
+    private fun getNeighborsForItem(
+        user: User,
+        itemId: Int,
+        ratingsUser: MutableMap<Int, Double>,
+        userItems: List<Int>
+    ): List<Neighbor> {
+
+        val outmap = mutableListOf<Neighbor>()
+
+        for (entry in ratings.filter { it.value.containsKey(itemId) }) {
+            val neighborId = entry.key
+
+            val ratingsNeighbor = entry.value
+            val itemsNeighbor = ratingsNeighbor.map { it.key }
+
+            val itemsRatedByBoth = userItems.intersect(itemsNeighbor)
+
+            if (itemsRatedByBoth.isNotEmpty()) {
+                val currentNeighbor = Neighbor(users[neighborId]!!, 0.0)
+                val itemsU = ratingsUser.filter { itemsRatedByBoth.contains(it.key) }
+                val itemsV = entry.value.filter { itemsRatedByBoth.contains(it.key) }
+                info("${user.id} and ${currentNeighbor.id} have rated both ${itemsU.size} items ")
+                currentNeighbor.weight = WeightedPersonaCorrelation(
+                    itemsU,
+                    itemsV,
+                    user,
+                    currentNeighbor,
+                    factorForNormalizeWeight
+                ).calculate()
+
+                outmap.add(currentNeighbor)
+
+            }
+        }
+        return outmap.asSequence().filter { it.weight > 0 }.sortedByDescending { it.weight }.take(numberOfNeighbors)
+            .toList()
+    }
 
     private fun getItemsAndNeighbors(user: User): Map<Int, List<Neighbor>> {
 
-        val neighborsCache: MutableList<Neighbor> = mutableListOf()
 
+        val ratingsUser = ratings[user.id]!!
+        val userItems = ratingsUser.asSequence().map { it.key }
         val allItems = items.asSequence().map { it.key }
-        val userItems = ratings[user.id]!!.asSequence().map { it.key }
         val missingItems = allItems - userItems
 
-        val itemsU = ratings[user.id]!!
+        val outMap = mutableMapOf<Int, List<Neighbor>>()
 
-        val userForMissingItems: MutableMap<Int, MutableList<Long>> = mutableMapOf()
-
-        measureBlock("Get users that rated missing items from ${user.id} ratings") {
-            ratings.forEach { entry ->
-                missingItems.forEach {
-                    if (entry.value.containsKey(it)) userForMissingItems[it]!!.add(entry.key)
-                }
-            }
+        missingItems.forEach {
+            outMap[it] = getNeighborsForItem(user, it, ratingsUser, userItems.toList())
         }
 
-        return userForMissingItems.mapValues { entry ->
-            val neighbors = entry.value
-
-            for (currentNeighborId in neighbors) {
-
-                //Avoid neighbors with only one game or playtime_forever = 0 or NULL
-                // if (currentNeighbor.std > 0) {
-                val currentNeighbor = Neighbor(users[currentNeighborId]!!, 0.0)
-
-                val itemsNeighbor = ratings[currentNeighborId]!!
-                // items rated by neighbor and also user
-                val itemsV = itemsNeighbor.filter { userItems.contains(it.key) }
-
-                info("${user.id} and $currentNeighborId have rated both ${itemsU.size} items ")
-
-                currentNeighbor.weight = if (itemsU.isNotEmpty())
-                    WeightedPersonaCorrelation(
-                        itemsU,
-                        itemsV,
-                        user,
-                        currentNeighbor,
-                        factorForNormalizeWeight
-                    ).calculate()
-                else
-                    0.0
-
-                neighborsCache.add(currentNeighbor)
-            }
-
-            neighborsCache.asSequence().filter { it.weight > 0 }.map { it }
-                .sortedByDescending { it.weight }
-                .let {
-                    return@mapValues it.take(numberOfNeighbors).toList()
-                }
-        }
-
+        return outMap
     }
 
-    private fun getRatings(user: User, itemsAndNeighbors: Map<Int, List<Neighbor>>): List<RSObject<Int, Double>> {
+
+    private fun getRatings(
+        user: User,
+        itemsAndNeighbors: Map<Int, List<Neighbor>>
+    ): List<RSObject<Int, Double>> {
         val listOut: MutableList<RSObject<Int, Double>> = mutableListOf()
 
         //1. Retrieve ratings given by V [Neighbor] for item i
         itemsAndNeighbors.forEach { entry ->
             val itemId = entry.key
-            val neighbors = entry.value.map { it.id }
 
-            val ratings = transaction {
-                //      addLogger(StdOutSqlLogger)
-                return@transaction GamesDAO.slice(GamesDAO.SteamId, GamesDAO.PlaytimeForever)
-                    .select { GamesDAO.AppId eq itemId and (GamesDAO.SteamId inList neighbors) and (GamesDAO.PlaytimeForever.isNotNull() or (GamesDAO.PlaytimeForever greater 0)) }
-                    .associate {
-                        it[GamesDAO.SteamId] to it[GamesDAO.PlaytimeForever].toDouble()
-                    }
-            }
+            val score = getRate(user, itemId, entry.value)
 
-
-            if (ratings.isNotEmpty()) {
-                // 2. Calculate score
-                val score = ZScoreRating(user, entry.value, ratings).calculate()
-                listOut.add(itemId hasScore score)
-            } else {
-                listOut.add(itemId hasScore -1.0) //impossible to determine score
-            }
+            listOut.add(itemId hasScore score)
         }
+
         return listOut
     }
 
-    override fun test(calculator: IErrorCalculator<Double>) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun getRate(user: User, itemId: Int, neighbors: List<Neighbor>): Double {
+        val neighborsRating = neighbors.asSequence().associate {
+            val map = ratings[it.id]!!
+            val rate = map[itemId]!!
+            it.id to rate
+        }
+        return ZScoreRating(user, neighbors, neighborsRating).calculate()
     }
+
+    override fun test(): Double {
+
+        val excludedItems = mutableListOf<Pair<Long, Int>>()
+        val excludedUsers = mutableListOf<Long>()
+
+
+        var testRatings = mutableMapOf<Long, MutableMap<Int, Double>>()
+        transaction {
+            measureBlock("Retrieve all test ratings") {
+                GamesTestDAO.slice(GamesTestDAO.SteamId, GamesTestDAO.AppId, GamesTestDAO.PlaytimeForever)
+                    .select { GamesTestDAO.PlaytimeForever.isNotNull() }
+            }.forEach {
+
+                testRatings.putIfAbsent(it[GamesTestDAO.SteamId], mutableMapOf())
+
+                testRatings[it[GamesTestDAO.SteamId]]!!.putIfAbsent(
+                    it[GamesTestDAO.AppId],
+                    it[GamesTestDAO.PlaytimeForever].toDoubleOrZero()
+                )
+
+            }
+        }
+        val maxUser = 30
+        val selectedUsers = (1..maxUser).map { testRatings.keys.random() }
+        testRatings = testRatings.filterKeys { selectedUsers.contains(it) }.toMutableMap()
+
+        assertEquals(selectedUsers.size, testRatings.size)
+
+        val calculatedRatings = mutableMapOf<Long, MutableMap<Int, Double>>()
+
+        for (user in testRatings) {
+            val selectedUser = users[user.key]!!
+
+            if (ratings[selectedUser.id] == null) {
+                excludedUsers.add(selectedUser.id)
+                continue
+            }
+
+            for (item in user.value) {
+                val userRatings = ratings[selectedUser.id]!!
+                val userItems = userRatings.asSequence().map { it.key }.toList()
+                val neighbors = getNeighborsForItem(selectedUser, item.key, userRatings, userItems)
+                val prediction = getRate(selectedUser, item.key, neighbors)
+
+                if (!prediction.isFinite()) {
+                    //probably not neighbors present for the item present in GamesTest so prediction is nan
+                    excludedItems.add(selectedUser.id to item.key)
+                    continue
+                }
+
+                calculatedRatings.putIfAbsent(selectedUser.id, mutableMapOf())
+                calculatedRatings[selectedUser.id]!![item.key] = prediction
+            }
+        }
+
+
+        excludedUsers.forEach { testRatings.remove(it) }
+        testRatings.forEach { entry ->
+            excludedItems.forEach {
+                if (entry.key == it.first) entry.value.remove(it.second)
+            }
+        }
+
+
+        val trueRatings = testRatings.asSequence().flatMap { it.value.values.asSequence() }.toList().toDoubleArray()
+        val predictedRatings =
+            calculatedRatings.asSequence().flatMap { it.value.values.asSequence() }.toList().toDoubleArray()
+        return RMSECalculator(trueRatings, predictedRatings).calculate()
+    }
+
 
 }
 
