@@ -24,9 +24,8 @@ import kotlin.random.Random
  * @param decreaseLearningRateOf
  * @param lambda1
  */
-//TODO Implement ITestable
 
-class Neighborhood_Latent_Factor_Engine(
+class Neighborhood_Learning_Engine(
     private val iterations: Int,
     private val factors: Int,
     private val learningRate: Double,
@@ -77,14 +76,13 @@ class Neighborhood_Latent_Factor_Engine(
             measureBlock("Load learned parameter") { loadLearn() }
         } else {
             initRatings()
-            initDataStructureForTraning()
-            train()
+            initDataStructureForTraining()
         }
 
     }
 
     override fun test(): Double {
-        loadLearn()
+
         val testRatings = mutableMapOf<Long, MutableMap<Int, Double>>()
         transaction {
             measureBlock("Retrieve all test ratings") {
@@ -120,7 +118,7 @@ class Neighborhood_Latent_Factor_Engine(
                     continue
                 }
 
-                val rate = LatentFactorsWithImplicit_RatingCalculator(
+                val rate = Latent_RatingCalculator(
                     meanOverall,
                     users[userId]!!.avg,
                     items[itemId]!!.avg,
@@ -155,7 +153,6 @@ class Neighborhood_Latent_Factor_Engine(
 
     private fun initRatings() {
         transaction {
-            addLogger(StdOutSqlLogger)
             measureBlock("Retrieve all ratings") {
                 GamesDAO.slice(GamesDAO.SteamId, GamesDAO.AppId, GamesDAO.PlaytimeForever)
                     .select { GamesDAO.PlaytimeForever.isNotNull() }
@@ -170,7 +167,7 @@ class Neighborhood_Latent_Factor_Engine(
         }
     }
 
-    private fun initDataStructureForTraning() {
+    private fun initDataStructureForTraining() {
 
         transaction {
             val listOfAvg =
@@ -283,7 +280,7 @@ class Neighborhood_Latent_Factor_Engine(
 
                     var learningRate = learningRate
 
-                    val prediction = LatentFactorsWithImplicit_RatingCalculator(
+                    val prediction = Latent_RatingCalculator(
                         meanOverall,
                         internalUser.avg,
                         internalItem.avg,
@@ -303,6 +300,7 @@ class Neighborhood_Latent_Factor_Engine(
                         latentItems,
                         latentImplicits[internalUser.id]!!
                     )
+
 
                     learningRate -= decreaseLearningRateOf
 
@@ -325,7 +323,7 @@ class Neighborhood_Latent_Factor_Engine(
 
     }
 
-    private fun saveLearn() {
+    override fun saveLearn() {
         val usersFile = engineDir.resolve("users.cache")
         val itemsFile = engineDir.resolve("items.cache")
         val latentUsersFile = engineDir.resolve("latentUsers.cache")
@@ -356,7 +354,7 @@ class Neighborhood_Latent_Factor_Engine(
     }
 
 
-    private fun loadLearn() {
+    override fun loadLearn() {
         transaction {
             val listOfAvg =
                 GamesDAO.slice(GamesDAO.PlaytimeForever.avg()).selectAll()
@@ -450,6 +448,10 @@ class Neighborhood_Latent_Factor_Engine(
         biasItem += learningRate * (error - lambda1 * biasItem)
         item.avg = biasItem
 
+        //update
+        users[user.id] = user
+        items[item.id] = item
+
         val factorForNormalizingImplicits = latentImplicits.count().toDouble().pow(-0.5)
 
         latentItems[item.id] =
@@ -461,9 +463,11 @@ class Neighborhood_Latent_Factor_Engine(
             .mapIndexed { index, value -> value + learningRate * (error * latentItems[item.id]!![index] - lambda1 * value) }
             .toList().toDoubleArray()
 
-        latentImplicits[item.id] = latentImplicits[item.id]!!.asSequence()
-            .mapIndexed { index, value -> value + learningRate * (error * latentItems[item.id]!![index] - lambda1 * value) }
-            .toList().toDoubleArray()
+        for (implicit in latentImplicits.keys) {
+            latentImplicits[implicit] = latentImplicits[implicit]!!.asSequence()
+                .mapIndexed { index, value -> value + learningRate * (error * latentItems[item.id]!![index] - lambda1 * value) }
+                .toList().toDoubleArray()
+        }
 
 
         //  check if there are invalid values
@@ -497,7 +501,7 @@ class Neighborhood_Latent_Factor_Engine(
         val itemsNotRatedByUser = allItems - itemsRatedByUser
 
         return itemsNotRatedByUser.map { itemId ->
-            val prediction = LatentFactorsWithImplicit_RatingCalculator(
+            val prediction = Latent_RatingCalculator(
                 meanOverall,
                 users[id]!!.avg,
                 items[itemId]!!.avg,

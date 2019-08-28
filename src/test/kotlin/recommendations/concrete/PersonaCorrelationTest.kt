@@ -1,8 +1,7 @@
 package recommendations.concrete
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-
-import org.junit.jupiter.api.Assertions.*
 import recommendations.skel.Neighbor
 import recommendations.skel.User
 import kotlin.math.sqrt

@@ -2,9 +2,6 @@ package recommendations.math
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import recommendations.concrete.PersonaCorrelation
-import recommendations.skel.Neighbor
-import recommendations.skel.User
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -77,7 +74,6 @@ internal class FunctionsKtTest {
         val random: Random = Random(System.currentTimeMillis())
         return (1..N).associate { Pair(random.nextLong(), random.nextDouble()) }
     }
-
 
 
     @Test

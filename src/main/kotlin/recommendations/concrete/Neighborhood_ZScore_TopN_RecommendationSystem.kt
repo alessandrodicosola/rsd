@@ -1,20 +1,14 @@
 package recommendations.concrete
 
-import common.generateDoubleArray
 import common.info
 import common.measureBlock
 import common.toDoubleOrZero
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNotNull
 import org.jetbrains.exposed.sql.transactions.transaction
 import recommendations.skel.*
 import sql.dao.GamesDAO
 import sql.dao.GamesTestDAO
-import java.util.logging.Logger
-import kotlin.math.min
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.to
 
 
 /**

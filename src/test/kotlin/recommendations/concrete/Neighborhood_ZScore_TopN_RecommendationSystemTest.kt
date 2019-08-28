@@ -1,8 +1,8 @@
 package recommendations.concrete
 
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-
-import org.junit.jupiter.api.Assertions.*
 
 internal class Neighborhood_ZScore_TopN_RecommendationSystemTest {
 

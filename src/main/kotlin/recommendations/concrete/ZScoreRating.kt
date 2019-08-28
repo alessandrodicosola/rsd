@@ -4,7 +4,6 @@ import recommendations.skel.IRatingCalculator
 import recommendations.skel.Neighbor
 import recommendations.skel.User
 import kotlin.math.absoluteValue
-import kotlin.streams.asSequence
 
 /**
  * Calculate ZScore Rating using this formula:

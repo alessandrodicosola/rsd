@@ -1,12 +1,11 @@
 package recommendations.concrete
 
 import common.dotProduct
-import common.scalarProduct
 import recommendations.skel.IRatingCalculator
 import kotlin.math.pow
 import kotlin.test.assertEquals
 
-class LatentFactorsWithImplicit_RatingCalculator(
+class Latent_RatingCalculator(
     private val meanOverall: Double,
     private val biasUser: Double,
     private val biasItem: Double,

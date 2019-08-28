@@ -1,20 +1,16 @@
 package common
 
-import org.jetbrains.exposed.sql.Seq
-import java.util.logging.Handler
-import java.util.logging.LogRecord
+import java.time.Duration
+import java.time.LocalTime
 import java.util.logging.Logger
-import kotlin.random.Random
 
 inline fun <T, reified K : Any> K.measureBlock(message: String, block: () -> T): T {
 
-    val now = System.currentTimeMillis()
+    val start = LocalTime.now()
     val out = block()
-    val end = System.currentTimeMillis()
-    val span = end - now
-    val flag = span > 1000
-    Logger.getLogger(this::class.simpleName)
-        .info("$message => Elapsed time: ${if (flag) span / 1000 else span} ${if (flag) "s" else "ms"}")
+    val end = LocalTime.now()
+    val span = Duration.between(start, end).toMillis()
+    this.info("$message => time: $span ms")
     return out
 }
 

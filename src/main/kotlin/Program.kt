@@ -1,8 +1,6 @@
 import com.beust.klaxon.json
 import recommendations.concrete.CachedEngine
-
 import recommendations.concrete.Neighborhood_ZScore_TopN_RecommendationSystem
-import java.util.logging.Level
 import java.util.logging.Logger
 
 
@@ -14,7 +12,10 @@ fun main(args: Array<String>) {
     val engine = Neighborhood_ZScore_TopN_RecommendationSystem(40, 5)
     val cachedEngine = CachedEngine(engine)
 
-    val list = cachedEngine.getRecommendations(userId)
+    val MAX = 20
+
+    val list =
+        cachedEngine.getRecommendations(userId)
 
     if (list.isEmpty()) print(json {
         obj(

@@ -1,16 +1,16 @@
 package recommendations.concrete
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-
-import org.junit.jupiter.api.Assertions.*
 import recommendations.skel.IRSEngine
 import recommendations.skel.RSObject
 import recommendations.skel.hasScore
 
 internal class CachedEngineTest {
 
-    private class TestEngine : IRSEngine<Long,Int,Double>() {
-        override fun getRecommendations(id: Long): List<RSObject<Int,Double>> {
+    private class TestEngine : IRSEngine<Long, Int, Double>() {
+        override fun getRecommendations(id: Long): List<RSObject<Int, Double>> {
             return listOf(1 hasScore 0.0, 2 hasScore 0.3, 3 hasScore 0.5)
         }
 

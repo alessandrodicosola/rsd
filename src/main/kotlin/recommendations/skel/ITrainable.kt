@@ -5,4 +5,6 @@ package recommendations.skel
  */
 interface ITrainable {
     fun train()
+    fun loadLearn()
+    fun saveLearn()
 }

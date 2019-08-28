@@ -1,8 +1,5 @@
 package recommendations.skel
 
-import java.io.Serializable
-import kotlin.reflect.full.isSubclassOf
-
 open class RSObject<out T : Number, out O : Number>(val id: T, val score: O) {
 
     override fun toString(): String {

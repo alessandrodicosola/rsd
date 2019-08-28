@@ -16,6 +16,9 @@ fun DoubleArray.scalarProduct(scalar: Double): DoubleArray {
     return this.asSequence().map { it * scalar }.toList().toDoubleArray()
 }
 
+fun Sequence<Double>.scalarProduct(scalar: Double): Sequence<Double> {
+    return this.map { it * scalar }
+}
 
 /**
  * @return Euclidean Norm of [this] vector: ||x|| = sqrt(sum(x_i))
@@ -23,4 +26,3 @@ fun DoubleArray.scalarProduct(scalar: Double): DoubleArray {
 fun DoubleArray.norm(): Double {
     return this.asSequence().map { it * it }.sum().pow(0.5)
 }
-

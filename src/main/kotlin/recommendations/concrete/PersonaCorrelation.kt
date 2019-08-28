@@ -3,8 +3,6 @@ package recommendations.concrete
 import recommendations.skel.IWeightCalculator
 import recommendations.skel.Neighbor
 import recommendations.skel.User
-import java.util.logging.Logger
-import kotlin.math.log
 import kotlin.math.sqrt
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
