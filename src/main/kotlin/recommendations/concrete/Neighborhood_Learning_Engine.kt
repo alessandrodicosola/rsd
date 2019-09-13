@@ -33,6 +33,9 @@ class Neighborhood_Learning_Engine(
     private val lambda1: Double,
     private val errorTollerance: Double
 ) : IRSEngine<Long, Int, Double>(), ITrainable, ITestable<Double> {
+    override fun updateRecommendations(userId: Long, itemId: Int, ratingType: Double) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     // constraint on parameter
     init {
@@ -190,7 +193,7 @@ class Neighborhood_Learning_Engine(
                         User(
                             it[GamesDAO.SteamId],
                             it[GamesDAO.PlaytimeForever.avg()].toDoubleOrZero(),
-                            it[GamesDAO.PlaytimeForever.function("STD")].toDoubleOrZero()
+                            it[GamesDAO.PlaytimeForever.function("STD")].toDoubleOrOne()
                         )
             }.toMutableMap()
         }
@@ -207,7 +210,7 @@ class Neighborhood_Learning_Engine(
                                 Item(
                                     it[GamesDAO.AppId],
                                     it[GamesDAO.PlaytimeForever.avg()].toDoubleOrZero(),
-                                    it[GamesDAO.PlaytimeForever.function("STD")].toDoubleOrZero()
+                                    it[GamesDAO.PlaytimeForever.function("STD")].toDoubleOrOne()
                                 )
                     }.toMutableMap()
             }
@@ -267,6 +270,8 @@ class Neighborhood_Learning_Engine(
 
             var sumError = 0.0
 
+            var learningRate = learningRate
+
 
             for (element in ratings) {
 
@@ -278,7 +283,6 @@ class Neighborhood_Learning_Engine(
 
                     var error: Double = 0.0
 
-                    var learningRate = learningRate
 
                     val prediction = Latent_RatingCalculator(
                         meanOverall,
@@ -492,22 +496,22 @@ class Neighborhood_Learning_Engine(
     }
 
 
-    override fun getRecommendations(id: Long): List<RSObject<Int, Double>> {
+    override fun getRecommendations(userId: Long, _itemId: Int): List<RSObject<Int, Double>> {
 
         initRatings()
 
-        val itemsRatedByUser = ratings[id]!!.map { it.key }
+        val itemsRatedByUser = ratings[userId]!!.map { it.key }
         val allItems = items.keys
         val itemsNotRatedByUser = allItems - itemsRatedByUser
 
         return itemsNotRatedByUser.map { itemId ->
             val prediction = Latent_RatingCalculator(
                 meanOverall,
-                users[id]!!.avg,
+                users[userId]!!.avg,
                 items[itemId]!!.avg,
-                latentUsers[id]!!,
+                latentUsers[userId]!!,
                 latentItems[itemId]!!,
-                latentImplicits[id]!!
+                latentImplicits[userId]!!
             ).calculate()
 
             RSObject(itemId, prediction)

@@ -16,11 +16,15 @@ inline fun <T, reified K : Any> K.measureBlock(message: String, block: () -> T):
 
 
 inline fun <T, reified K : Any> K.measureBlock(block: () -> T): T {
-    return this.measureBlock("", block)
+    return this.measureBlock(K::class.simpleName!!, block)
 }
 
 fun Number?.toDoubleOrZero(): Double {
     return this?.toDouble() ?: 0.0;
+}
+
+fun Number?.toDoubleOrOne(): Double {
+    return this?.toDouble() ?: 1.0
 }
 
 

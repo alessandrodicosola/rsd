@@ -20,13 +20,17 @@ import kotlin.test.assertEquals
  */
 
 
-// TODO Implement ITestable
-
 class Neighborhood_ZScore_TopN_RecommendationSystem(
     private val numberOfNeighbors: Int,
     private val factorForNormalizeWeight: Int
 ) :
     IRSEngine<Long, Int, Double>(), ITestable<Double> {
+
+
+
+    override fun updateRecommendations(userId: Long, itemId: Int, ratingType: Double) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
 
     private var ratings: MutableMap<Long, MutableMap<Int, Double>> = mutableMapOf()
@@ -98,11 +102,11 @@ class Neighborhood_ZScore_TopN_RecommendationSystem(
     }
 
 
-    override fun getRecommendations(id: Long): List<RSObject<Int, Double>> {
+    override fun getRecommendations(userId: Long, itemId: Int): List<RSObject<Int, Double>>  {
 
 
         // 0.Get user information
-        val user = users[id]!!
+        val user = users[userId]!!
 
         // 1.Get neighbors
         val itemsAndNeighbors = measureBlock("Getting neighbors for user: ${user.id}...") {

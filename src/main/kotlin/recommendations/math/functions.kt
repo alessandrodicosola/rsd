@@ -54,39 +54,3 @@ fun personaCorrelation(
     val normalizedRV = intersectV.map { it.value - avgV }
     return cosineSimilarity(normalizedIU, normalizedIV, normalizedRU, normalizedRV)
 }
-
-fun weightPersonaCorrelationWithFactorSize(
-    intersectU: Map<Long, Double>,
-    intersectV: Map<Long, Double>,
-    avgU: Double,
-    avgV: Double,
-    weightFactor: Int
-): Double {
-    val factor = (min(intersectU.size, weightFactor) / weightFactor).toDouble()
-    return personaCorrelation(intersectU, intersectV, avgU, avgV) * factor
-}
-
-//TODO Check
-fun WPC(
-    intersectU: Map<Long, Double>,
-    intersectV: Map<Long, Double>,
-    avgU: Double,
-    avgV: Double,
-    weights: Map<Long, Double>
-): Double {
-
-    assertEquals(intersectU.size, intersectV.size)
-    assertEquals(intersectU.size, weights.size)
-    assertTrue(intersectU.all { intersectV.containsKey(it.key) })
-    assertTrue(weights.all { intersectU.containsKey(it.key) })
-
-    val mapU = intersectU.mapValues { (it.value - avgU) * weights.get(it.key)!! }
-    val mapV = intersectV.mapValues { it.value - avgV }
-    val sumNumerator = mapU.map { it.value * mapV.get(it.key)!! }.sum()
-
-    val sumU = intersectU.map { Math.pow(it.value - avgU, 2.0) * weights.get(it.key)!! }.sum()
-    val sumV = intersectV.map { Math.pow(it.value - avgV, 2.0) * weights.get(it.key)!! }.sum()
-
-    return sumNumerator / sqrt(sumU * sumV)
-
-}

@@ -9,7 +9,7 @@ import kotlin.math.pow
  */
 fun DoubleArray.dotProduct(other: DoubleArray): Double {
     assert(this.size == other.size)
-    return this.asSequence().mapIndexed { index, value -> value * other[index] }.sum()
+    return this.mapIndexed { index, value -> value * other[index] }.sum()
 }
 
 fun DoubleArray.scalarProduct(scalar: Double): DoubleArray {
@@ -25,4 +25,11 @@ fun Sequence<Double>.scalarProduct(scalar: Double): Sequence<Double> {
  */
 fun DoubleArray.norm(): Double {
     return this.asSequence().map { it * it }.sum().pow(0.5)
+}
+
+inline fun DoubleArray.updateIndexed(transform: (Int, Double) -> Double): DoubleArray {
+    this.forEachIndexed { index, value ->
+        this[index] = transform(index,value)
+    }
+    return this
 }

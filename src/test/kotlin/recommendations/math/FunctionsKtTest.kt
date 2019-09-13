@@ -75,45 +75,4 @@ internal class FunctionsKtTest {
         return (1..N).associate { Pair(random.nextLong(), random.nextDouble()) }
     }
 
-
-    @Test
-    fun WPC() {
-        /*
-               user/item   | a | b | c |
-                   A       | 1 | 4 | 5 |
-                   B       | 2 | 1 | 2 |
-                   C       | 3 | 2 | 3 |
-            - A and B have rated the same items: a and c
-            - We want recommendation for item b
-            - U_ac =  { A , B }
-            - I_AB =  { a , c }
-            - I have to calculate similarity between item a-b and c-b
-         */
-
-        val ratingsA = listOf(1, 5)
-        val ratingsB = listOf(2, 2)
-
-        val mapA = ratingsA.mapIndexed { index, value -> Pair(index.toLong(), value.toDouble()) }.toMap()
-        val mapB = ratingsB.mapIndexed { index, value -> Pair(index.toLong(), value.toDouble()) }.toMap()
-
-        val ratings_a = listOf(1, 2, 3)
-        val ratings_c = listOf(5, 2, 3)
-        val ratings_b = listOf(4, 1, 2)
-
-        val map_a = ratings_a.mapIndexed { index, value -> Pair(index.toLong(), value.toDouble()) }.toMap()
-        val map_b = ratings_b.mapIndexed { index, value -> Pair(index.toLong(), value.toDouble()) }.toMap()
-        val map_c = ratings_c.mapIndexed { index, value -> Pair(index.toLong(), value.toDouble()) }.toMap()
-
-        var map_weights = mutableMapOf<Long, Double>()
-
-        recommendations.math.personaCorrelation(map_a, map_b, ratings_a.average(), ratings_b.average())
-            .let { map_weights.set(0, it) }
-        recommendations.math.personaCorrelation(map_c, map_b, ratings_c.average(), ratings_b.average())
-            .let { map_weights.set(1, it) }
-
-        val cv = recommendations.math.WPC(mapA, mapB, ratingsA.average(), ratingsB.average(), map_weights)
-        println(cv)
-    }
-
-
 }
