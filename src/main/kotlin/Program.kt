@@ -6,6 +6,7 @@ import recommendations.skel.IRSEngine
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.InvalidParameterException
 import java.util.logging.Logger
 import kotlin.math.pow
 
@@ -26,8 +27,9 @@ fun main(args: Array<String>) {
     }
 
     val userId = args[1].toLong()
+    val itemId = args[2].toInt()
 
-    Logger.getGlobal().info("Calculating recommendations for user $userId ...")
+    Logger.getGlobal().info("Calculating recommendations for user $userId -> $itemId...")
 
     var engine: IRSEngine<Long, Int, Double>? = null
     if (type == 0) {
@@ -35,7 +37,7 @@ fun main(args: Array<String>) {
     } else if (type == 1) {
         engine = Neighborhood_Learning_Engine(20, 20, 0.00005, 0.0001, 10.0, 10.0.pow(-0.5))
     } else {
-        print(json { obj("error" to true, "message" to "Invalid type: $type", "recommendations" to "") }.toJsonString())
+        throw InvalidParameterException("type")
     }
 
     val cachedEngine = CachedEngine(engine!!)
