@@ -6,6 +6,7 @@ import recommendations.skel.IRSEngine
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.InvalidParameterException
 import java.util.logging.Logger
 import kotlin.math.pow
@@ -18,16 +19,18 @@ fun main(args: Array<String>) {
 
     var type : Int = 0
     //edit conf for change engine
-    if (!Files.exists(Path.of("conf"))) {
-        File("conf").writer().write(0)
+    val name = "conf.txt"
+    val file = Paths.get(name)
+    if (!Files.exists(file)){
+        Files.createFile(file)
+        Files.writeString(file,"0")
     }
-
-    File("conf").useLines {
+    else File(name).useLines {
         type = it.elementAt(0).toInt()
     }
 
-    val userId = args[1].toLong()
-    val itemId = args[2].toInt()
+    val userId = args[0].toLong()
+    val itemId = args[1].toInt()
 
     Logger.getGlobal().info("Calculating recommendations for user $userId -> $itemId...")
 
