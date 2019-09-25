@@ -43,7 +43,7 @@ fun main(args: Array<String>) {
     val cachedEngine = CachedEngine(engine!!)
 
     val list =
-        cachedEngine.getRecommendations(userId)
+        cachedEngine.getRecommendations(userId,itemId)
 
     if (list.isEmpty()) print(json {
         obj(

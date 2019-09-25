@@ -10,6 +10,10 @@ import java.nio.file.Paths
 
 class CachedEngine<ObjKey : Number, Item : Number, Value : Number>(private val engine: IRSEngine<ObjKey, Item, Value>) :
     IRSEngine<ObjKey, Item, Value>() {
+    override fun updateRecommendations(userId: ObjKey, itemId: Item, ratingType: Value) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     init {
         // create .cache directory
         val cacheDir = Paths.get(".cached")
@@ -26,7 +30,7 @@ class CachedEngine<ObjKey : Number, Item : Number, Value : Number>(private val e
 
     fun cached(id: ObjKey) = File(basePath.resolve("$id.txt").toString()).exists()
 
-    override fun getRecommendations(id: ObjKey): List<RSObject<Item, Value>> {
+    override fun getRecommendations(id: ObjKey, _itemId: Item): List<RSObject<Item, Value>> {
 
         val internalFile = basePath.resolve("$id.txt")
         val file = File(internalFile.toString())
@@ -42,7 +46,7 @@ class CachedEngine<ObjKey : Number, Item : Number, Value : Number>(private val e
             }
             return cacheList
         } else {
-            val inList = engine.getRecommendations(id)
+            val inList = engine.getRecommendations(id,_itemId)
             file.createNewFile()
             file.writer().use { writer ->
                 inList.forEach {
