@@ -20,6 +20,7 @@ import kotlin.test.assertTrue
 /**
  *  Ratings are calculated with a trained recommender system
  */
+@Deprecated("Diverge")
 class Neighborhood_Learning_Engine_2(
     private val iterations: Int,
     private val factors: Int,
