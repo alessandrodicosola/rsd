@@ -11,10 +11,6 @@ import java.security.InvalidParameterException
 import java.util.logging.Logger
 import kotlin.math.pow
 
-/* TODO
-    - Koma - scientific library for pltting in kotlin
- */
-
 fun main(args: Array<String>) {
 
     var type : Int = 0

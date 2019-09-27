@@ -12,7 +12,9 @@ open class WeightedCorrelation(
     private val factor: Int
 ) : IWeightCalculator {
     override fun calculate(): Double {
+        //Calcolo il peso con un generico IWeightCalculator
         val w = weightCalculator.calculate()
+        //Peso la somiglianza
         val f = (min(numberOfItems, factor).toDouble() / factor)
         return f * w
     }

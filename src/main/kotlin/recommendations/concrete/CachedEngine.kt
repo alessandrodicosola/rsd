@@ -8,8 +8,14 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 
+/**
+ * [IRSEngine] che calcola le raccomandazioni e le salva su disco.
+ * Successivamente vengono caricate dal disco senza ricalcolarle.
+ * @param engine [IRSEngine] da utilizzare
+ */
 class CachedEngine<ObjKey : Number, Item : Number, Value : Number>(private val engine: IRSEngine<ObjKey, Item, Value>) :
     IRSEngine<ObjKey, Item, Value>() {
+
     override fun updateRecommendations(userId: ObjKey, itemId: Item, ratingType: Value) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
@@ -28,14 +34,21 @@ class CachedEngine<ObjKey : Number, Item : Number, Value : Number>(private val e
 
     private val basePath = Paths.get(".cached", engine::class.simpleName).toAbsolutePath()
 
+    /**
+     * @return Restituisce [True] se il sistema ha già salvato le raccomandazioni altrimenti [False]
+     */
     fun cached(id: ObjKey) = File(basePath.resolve("$id.txt").toString()).exists()
 
-    override fun getRecommendations(id: ObjKey, _itemId: Item): List<RSObject<Item, Value>> {
+    override fun getRecommendations(userId: ObjKey, _itemId: Item): List<RSObject<Item, Value>> {
 
-        val internalFile = basePath.resolve("$id.txt")
+        //Ottengo il percorso del file su cui salvare le raccomandazioni.
+        val internalFile = basePath.resolve("$userId.txt")
+        //Ottengo il file
         val file = File(internalFile.toString())
+
         val cacheList: MutableList<RSObject<Item, Value>> = mutableListOf()
 
+        //Se il file esiste carico le raccomandazioni
         if (file.exists()) {
             file.reader().use {
                 it.forEachLine {
@@ -45,8 +58,11 @@ class CachedEngine<ObjKey : Number, Item : Number, Value : Number>(private val e
                 }
             }
             return cacheList
-        } else {
-            val inList = engine.getRecommendations(id,_itemId)
+
+        }
+        //Se il file non esiste eseguo l'engine per calcolare le raccomandazioni
+        else {
+            val inList = engine.getRecommendations(userId,_itemId)
             file.createNewFile()
             file.writer().use { writer ->
                 inList.forEach {

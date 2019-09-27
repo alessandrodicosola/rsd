@@ -4,6 +4,7 @@ import common.dotProduct
 import recommendations.skel.IRatingCalculator
 import kotlin.math.pow
 
+
 /**
  * Calculate the user's rating for specific item
  * @param meanOverall
@@ -14,6 +15,7 @@ import kotlin.math.pow
  * @param mapRatingsNeighbors
  * @param mapBiasNeighbors Map of B_vi of neighbors
  */
+@Deprecated("Neighborhood_Learning_Engine_2 non è stato inserito nella tesi")
 class Latent2_RatingCalculator(
     private val meanOverall: Double,
     private val biasUser: Double,

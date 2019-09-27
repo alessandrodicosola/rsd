@@ -1,5 +1,10 @@
 package recommendations.skel
 
+/**
+ * Classe che definisce la raccomandazione
+ * @param id Id dell'oggetto
+ * @param score Valore della rate calcolato dal [IRSEngine]
+ */
 open class RSObject<out T : Number, out O : Number>(val id: T, val score: O) {
 
     override fun toString(): String {

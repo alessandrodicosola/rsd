@@ -17,14 +17,13 @@ import kotlin.math.pow
 import kotlin.random.Random
 
 /**
- * Ratings are calculated with a trained recommender system
+ * Ratings are calculated with a trained recommendation system
  * @param factors Max factors to extract
  * @param iterations Max iterations allowed
  * @param learningRate
  * @param decreaseLearningRateOf
  * @param lambda1
  */
-
 class Neighborhood_Learning_Engine(
     private val iterations: Int,
     private val factors: Int,
@@ -78,14 +77,18 @@ class Neighborhood_Learning_Engine(
             //trained
             measureBlock("Load learned parameter") { loadLearn() }
         } else {
+            //not trained
             initRatings()
             initDataStructureForTraining()
         }
-
     }
 
-    override fun test(): Double {
 
+    /**
+     * Implementazione del metodo [ITestable.test] calcolando l'errore attraverso il [RMSECalculator]
+     */
+    override fun test(): Double {
+        //Ottengo i dati di test dal database
         val testRatings = mutableMapOf<Long, MutableMap<Int, Double>>()
         transaction {
             measureBlock("Retrieve all test ratings") {
@@ -102,8 +105,8 @@ class Neighborhood_Learning_Engine(
 
             }
         }
-        val excludedItems = mutableMapOf<Long, Int>()
 
+        val excludedItems = mutableMapOf<Long, Int>()
         val calculatedRatings: MutableMap<Long, MutableMap<Int, Double>> = mutableMapOf()
         for (entry in testRatings) {
             val userId = entry.key
@@ -115,12 +118,16 @@ class Neighborhood_Learning_Engine(
                 val latentItem = latentItems[itemId]
                 val latentImplicit = latentImplicits[userId]
 
+                /*
+                In alcuni casi alcuni utenti presenti nel test set non sono presenti nel training set
+                quindi non si hanno informazioni associate su di essi. Percui vengono saltati
+                */
                 if (latentUser == null || latentItem == null || latentImplicit == null) {
                     warning("rate given by $userId to $itemId exclude from the test")
                     excludedItems[userId] = itemId
                     continue
                 }
-
+                //Calcolo la predizione del rate
                 val rate = Latent_RatingCalculator(
                     meanOverall,
                     users[userId]!!.avg,
@@ -137,7 +144,7 @@ class Neighborhood_Learning_Engine(
         }
 
 
-        //clean test ratings
+        //Elimino dal test set gli oggetti degli utenti saltati
         for (exclude in excludedItems) {
             if (testRatings.contains(exclude.key)) {
                 if (testRatings[exclude.key]!!.contains(exclude.value)) {
@@ -147,13 +154,13 @@ class Neighborhood_Learning_Engine(
         }
 
         val trueRatings = testRatings.flatMap { it.value.values }.toDoubleArray()
-
         val predictedRatings = calculatedRatings.flatMap { it.value.values }.toDoubleArray()
-
+        //Calcolo il root mean square error
         return RMSECalculator(trueRatings, predictedRatings).calculate()
     }
-
-
+    /**
+     * Metodo che inizializza i rate degli utenti
+     */
     private fun initRatings() {
         transaction {
             measureBlock("Retrieve all ratings") {
@@ -170,6 +177,9 @@ class Neighborhood_Learning_Engine(
         }
     }
 
+    /**
+     * Metodo che inizializza le strutture [users] [items] [latentUsers] [latentItems] [latentImplicits]
+     */
     private fun initDataStructureForTraining() {
 
         transaction {
@@ -246,23 +256,26 @@ class Neighborhood_Learning_Engine(
         assert(latentImplicits.all { it.value.all { it.value.size == factors } })
     }
 
+    /**
+     * //Implementazione del metodo [ITrainable.train]
+     */
     override fun train() {
         val start = LocalDateTime.now()
 
+        //Ottengo il numero massimo di rate da calcolare per ogni iterazione
         val ratingsCount = ratings.asSequence().map { it.value.size }.sum()
+        //Ottengo il numero massimo di utenti nel datasetr
         val userCount = ratings.asSequence().map { it.key }.distinct().count()
 
         info("Need to train $userCount users and $ratingsCount ratings")
 
-        //factor for normalizing error
-
         var currentStep = 0
-
 
         var currentError = 0.0
         var beforeError = 0.0
 
         for (iteration in 1..iterations) {
+
             info("error $currentError at iteration $iteration")
 
             /* if convergence */
@@ -272,30 +285,36 @@ class Neighborhood_Learning_Engine(
 
             var learningRate = learningRate
 
-
+            //Eseguo la discesa del gradiente
             for (element in ratings) {
 
                 for (item in element.value) {
-
+                    //Ottengo l'utente
                     val internalUser: User = users[element.key]!!
+                    //Otteno l'oggetto
                     val internalItem: Item = items[item.key]!!
+                    //Ottengo il rate dato dall'utente all'oggetto
                     val rate = item.value
 
                     var error: Double = 0.0
 
-
+                    //Calcolo la predizione
                     val prediction = Latent_RatingCalculator(
                         meanOverall,
                         internalUser.avg,
                         internalItem.avg,
+                        //Vettore contenente i fattori latenti dell'utente
                         latentUsers[internalUser.id]!!,
+                        //Vettore contenente i fattori latenti dell'oggetto
                         latentItems[internalItem.id]!!,
+                        //Vettore contenente i fattori latenti delle informazioni implicite relative a un utente
                         latentImplicits[internalUser.id]!!
                     ).calculate()
 
+                    //Calcolo l'errore
                     error = rate - prediction
 
-                    //update values
+                    //Eseguo il training.
                     trainUserItem(
                         internalUser,
                         internalItem,
@@ -304,11 +323,10 @@ class Neighborhood_Learning_Engine(
                         latentItems,
                         latentImplicits[internalUser.id]!!
                     )
-
-
+                    //Riduco il learning rate per garantire la convergenza della discesa del gradiente
                     learningRate -= decreaseLearningRateOf
 
-                    // break condition
+                    // Aggiorno l'errore
                     sumError += error
 
                     // log
@@ -317,16 +335,18 @@ class Neighborhood_Learning_Engine(
             }
 
             beforeError = currentError
+            // Normalizzo l'errore
             currentError = sumError / ratingsCount
-
         }
-
         val end = LocalDateTime.now()
         info("started at $start - ended at $end} - duration ${Duration.between(start, end).toMinutes()} minutes")
+        //Salvo i parametri
         saveLearn()
-
     }
 
+    /**
+     * //Implementazione del metodo [ITrainable.saveLearn]
+     */
     override fun saveLearn() {
         val usersFile = engineDir.resolve("users.cache")
         val itemsFile = engineDir.resolve("items.cache")
@@ -357,7 +377,9 @@ class Neighborhood_Learning_Engine(
         }
     }
 
-
+    /**
+     * //Implementazione del metodo [ITrainable.loadLearn]
+     */
     override fun loadLearn() {
         transaction {
             val listOfAvg =
@@ -430,7 +452,9 @@ class Neighborhood_Learning_Engine(
 
     }
 
-
+    /**
+     * Metodo che esegue il training di uno specifico utente per un specifico oggetto andando ad aggiornare le struttre dati per il training le quali sono [users] [items] [latentUsers] [latentItems] [latentImplicits]
+     */
     private fun trainUserItem(
         user: User,
         item: Item,
@@ -452,58 +476,46 @@ class Neighborhood_Learning_Engine(
         biasItem += learningRate * (error - lambda1 * biasItem)
         item.avg = biasItem
 
-        //update
+        //Aggiorno i valori dell'utente e dell'oggetto
         users[user.id] = user
         items[item.id] = item
 
+        //Calcolo il fattore per normalizzare la somma delle informazioni implicite rispetto a un utente
         val factorForNormalizingImplicits = latentImplicits.count().toDouble().pow(-0.5)
 
+        //Aggiorno le informazioni dei fattori latenti per lo specifico oggetto
         latentItems[item.id] =
             latentItems[item.id]!!.asSequence()
                 .mapIndexed { index, value -> value + learningRate * (error * (latentItems[item.id]!![index] + factorForNormalizingImplicits * latentImplicits.map { it.value[index] }.sumByDouble { it })) - lambda1 * value }
                 .toList().toDoubleArray()
 
+        //Aggiorno le informazioni dei fattori latenti per uno specifico utente
         latentUsers[user.id] = latentUsers[user.id]!!.asSequence()
             .mapIndexed { index, value -> value + learningRate * (error * latentItems[item.id]!![index] - lambda1 * value) }
             .toList().toDoubleArray()
 
+        //Aggiorno le informazioni sui fattori latenti delle informazioni implicite
         for (implicit in latentImplicits.keys) {
             latentImplicits[implicit] = latentImplicits[implicit]!!.asSequence()
                 .mapIndexed { index, value -> value + learningRate * (error * latentItems[item.id]!![index] - lambda1 * value) }
                 .toList().toDoubleArray()
         }
-
-
-        //  check if there are invalid values
-        /*
-        assertTrue(
-            "${user.id} -> ${latentUsers[user.id]!!.joinToString
-            { "$it" }}"
-        )
-        { latentUsers.all { it.value.all { it.isFinite() } } }
-        assertTrue(
-            "${item.id} -> ${latentItems[item.id]!!.joinToString
-            { "$it" }}"
-        )
-        { latentItems.all { it.value.all { it.isFinite() } } }
-        assertTrue(
-            "${user.id} -> ${latentImplicits[item.id]!!.joinToString
-            { "$it" }}"
-        )
-        { latentImplicits.all { it.value.all { it.isFinite() } } }
-        */
-
     }
 
-
+    /**
+     * Implmentazoine del [IRSEngine.getRecommendations]
+     */
     override fun getRecommendations(userId: Long, _itemId: Int): List<RSObject<Int, Double>> {
-
+        //Iniziallizzo i ratings
         initRatings()
-
+        //Ottengo gli oggetti valutati dall'utente
         val itemsRatedByUser = ratings[userId]!!.map { it.key }
+        //Ottengo tutti gli oggetto del dataset
         val allItems = items.keys
+        //Ottengo gli oggetti non valutati dall'utente
         val itemsNotRatedByUser = allItems - itemsRatedByUser
 
+        //Per ogni oggetto non valutato dall'utente calcolo la raccomandazione
         return itemsNotRatedByUser.map { itemId ->
             val prediction = Latent_RatingCalculator(
                 meanOverall,
