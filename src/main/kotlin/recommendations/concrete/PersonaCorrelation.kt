@@ -29,9 +29,9 @@ class PersonaCorrelation<Key>(
         assertTrue(ratingsU.all { ratingsV.containsKey(it.key) }, "ratingsU and ratingsV contains different keys")
 
         //Calcolo le aspettazioni dei rate dell'utente e del vicino: E[U-meanU]; E[V-meanV]
-        //Normalizzo i valori dei rate dell'utente rispetto al media dell'utente stesso
+        //Centro i valori dei rate dell'utente rispetto alla media dell'utente stesso
         val normalizedU = ratingsU.mapValues { it.value - user.avg }
-        //Normalizzo i valori dei rate del vicino rispetto al media dell'vicino stesso
+        //Centro i valori dei rate del vicino rispetto alla media dell'vicino stesso
         val normalizedV = ratingsV.mapValues { it.value - neighbor.avg }
 
         //Calcolo la covarianza tra utente e vicino
